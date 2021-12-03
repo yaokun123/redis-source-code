@@ -29,4 +29,5 @@ deps/lua/src/liblua.a
 *.dSYM
 Makefile.dep
 .DS_Store
+cmake-build-debug
 
