@@ -1,1 +1,0 @@
-/Library/Developer/CommandLineTools/usr/bin/cc -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk -dynamiclib -Wl,-headerpad_max_install_names -L/usr/local/opt/libiconv/lib -o helloworld.so -install_name @rpath/helloworld.so CMakeFiles/helloworld.dir/helloworld.c.o 
