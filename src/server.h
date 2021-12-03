@@ -900,13 +900,13 @@ struct redisServer {
     /* Networking */
     int port;                   /* TCP listening port */
     int tcp_backlog;            /* TCP listen() backlog */
-    char *bindaddr[CONFIG_BINDADDR_MAX]; /* Addresses we should bind to */
-    int bindaddr_count;         /* Number of addresses in server.bindaddr[] */
+    char *bindaddr[CONFIG_BINDADDR_MAX];         //// Addresses we should bind to
+    int bindaddr_count;                         //// Number of addresses in server.bindaddr[]
     char *unixsocket;           /* UNIX socket path */
     mode_t unixsocketperm;      /* UNIX socket permission */
-    int ipfd[CONFIG_BINDADDR_MAX]; /* TCP socket file descriptors */
-    int ipfd_count;             /* Used slots in ipfd[] */
-    int sofd;                   /* Unix socket file descriptor */
+    int ipfd[CONFIG_BINDADDR_MAX];            //// TCP socket file descriptors
+    int ipfd_count;                          //// Used slots in ipfd[]
+    int sofd;                               //// Unix socket file descriptor
     int cfd[CONFIG_BINDADDR_MAX];/* Cluster bus listening socket */
     int cfd_count;              /* Used slots in cfd[] */
     list *clients;              /* List of active clients */

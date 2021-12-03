@@ -1655,24 +1655,7 @@ void checkTcpBacklogSettings(void) {
 #endif
 }
 
-/* Initialize a set of file descriptors to listen to the specified 'port'
- * binding the addresses specified in the Redis server configuration.
- *
- * The listening file descriptors are stored in the integer array 'fds'
- * and their number is set in '*count'.
- *
- * The addresses to bind are specified in the global server.bindaddr array
- * and their number is server.bindaddr_count. If the server configuration
- * contains no specific addresses to bind, this function will try to
- * bind * (all addresses) for both the IPv4 and IPv6 protocols.
- *
- * On success the function returns C_OK.
- *
- * On error the function returns C_ERR. For the function to be on
- * error, at least one of the server.bindaddr addresses was
- * impossible to bind, or no bind addresses were specified in the server
- * configuration but the function is not able to bind * for at least
- * one of the IPv4 or IPv6 protocols. */
+// 初始化socket监听客户端请求
 int listenToPort(int port, int *fds, int *count) {
     int j;
 
@@ -1682,8 +1665,8 @@ int listenToPort(int port, int *fds, int *count) {
     for (j = 0; j < server.bindaddr_count || j == 0; j++) {
         if (server.bindaddr[j] == NULL) {
             int unsupported = 0;
-            /* Bind * for both IPv6 and IPv4, we enter here only if
-             * server.bindaddr_count == 0. */
+
+            // 监听ipv6
             fds[*count] = anetTcp6Server(server.neterr,port,NULL,
                 server.tcp_backlog);
             if (fds[*count] != ANET_ERR) {
@@ -1695,7 +1678,7 @@ int listenToPort(int port, int *fds, int *count) {
             }
 
             if (*count == 1 || unsupported) {
-                /* Bind the IPv4 address as well. */
+                // 监听ipv4
                 fds[*count] = anetTcpServer(server.neterr,port,NULL,
                     server.tcp_backlog);
                 if (fds[*count] != ANET_ERR) {
@@ -1803,14 +1786,21 @@ void initServer(void) {
             strerror(errno));
         exit(1);
     }
+
+    // 为16个db分配空间
     server.db = zmalloc(sizeof(redisDb)*server.dbnum);
 
-    /* Open the TCP listening socket for the user commands. */
+    // 初始化socket监听了ipv6 和 ipv4
+    // server.ipfd_count = 2
+    // server.ipfd[0] = x1
+    // server.ipfd[1] = x2
     if (server.port != 0 &&
         listenToPort(server.port,server.ipfd,&server.ipfd_count) == C_ERR)
         exit(1);
 
-    /* Open the listening Unix domain socket. */
+
+
+    // 监听本地套接字
     if (server.unixsocket != NULL) {
         unlink(server.unixsocket); /* don't care if this fails */
         server.sofd = anetUnixServer(server.neterr,server.unixsocket,
@@ -1822,7 +1812,10 @@ void initServer(void) {
         anetNonBlock(NULL,server.sofd);
     }
 
-    /* Abort if there are no listening sockets at all. */
+
+
+
+    // 如果没有监听的套接字（ipv6+ipv4+unix），直接返回错误
     if (server.ipfd_count == 0 && server.sofd < 0) {
         serverLog(LL_WARNING, "Configured to not listen anywhere, exiting.");
         exit(1);
@@ -1889,8 +1882,7 @@ void initServer(void) {
 
 
 
-
-    // 需要监听新的客户连接（文件事件）
+    // 为上面创建的服务端套接字关联文件事件，可读事件类型
     for (j = 0; j < server.ipfd_count; j++) {
         if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,
             acceptTcpHandler,NULL) == AE_ERR)
