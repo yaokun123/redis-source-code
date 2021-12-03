@@ -29,4 +29,3 @@ deps/lua/src/liblua.a
 Makefile.dep
 .DS_Store
 cmake-build-debug
-
