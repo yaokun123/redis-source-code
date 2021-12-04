@@ -619,19 +619,17 @@ static void acceptCommonHandler(int fd, int flags, char *ip) {
         close(fd); /* May be already closed, just ignore errors */
         return;
     }
-    /* If maxclient directive is set and this is one client more... close the
-     * connection. Note that we create the client instead to check before
-     * for this condition, since now the socket is already set in non-blocking
-     * mode and we can send an error for free using the Kernel I/O */
+
+    // 不能超过最大连接数
     if (listLength(server.clients) > server.maxclients) {
         char *err = "-ERR max number of clients reached\r\n";
 
-        /* That's a best effort error message, don't check write errors */
+        // 向客户端返回最大连接错误信息
         if (write(c->fd,err,strlen(err)) == -1) {
             /* Nothing to do, Just to avoid the warning... */
         }
-        server.stat_rejected_conn++;
-        freeClient(c);
+        server.stat_rejected_conn++;    // 拒绝连接++
+        freeClient(c);                  // 释放client
         return;
     }
 
@@ -1300,13 +1298,11 @@ int processMultibulkBuffer(client *c) {
     return C_ERR;
 }
 
-/* This function is called every time, in the client structure 'c', there is
- * more query buffer to process, because we read more data from the socket
- * or because a client was blocked and later reactivated, so there could be
- * pending query buffer, already representing a full command, to process. */
+// 从c->querybuf中解析客户端命令，执行命令
 void processInputBuffer(client *c) {
     server.current_client = c;
-    /* Keep processing while there is something in the input buffer */
+
+    // 按照RESP协议解析字符串
     while(sdslen(c->querybuf)) {
         /* Return if clients are paused. */
         if (!(c->flags & CLIENT_SLAVE) && clientsArePaused()) break;
@@ -1343,6 +1339,7 @@ void processInputBuffer(client *c) {
             resetClient(c);
         } else {
             /* Only reset the client when the command was executed. */
+            //// 执行命令
             if (processCommand(c) == C_OK) {
                 if (c->flags & CLIENT_MASTER && !(c->flags & CLIENT_MULTI)) {
                     /* Update the applied replication offset of our master. */
@@ -1365,6 +1362,7 @@ void processInputBuffer(client *c) {
     server.current_client = NULL;
 }
 
+// 客户端连接套接字可读时会调用
 void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     client *c = (client*) privdata;
     int nread, readlen;
@@ -1399,7 +1397,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
             freeClient(c);
             return;
         }
-    } else if (nread == 0) {
+    } else if (nread == 0) {// 客户端断连
         serverLog(LL_VERBOSE, "Client closed connection");
         freeClient(c);
         return;
@@ -1415,6 +1413,8 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     c->lastinteraction = server.unixtime;
     if (c->flags & CLIENT_MASTER) c->read_reploff += nread;
     server.stat_net_input_bytes += nread;
+
+    // 限制客户端发送长度
     if (sdslen(c->querybuf) > server.client_max_querybuf_len) {
         sds ci = catClientInfoString(sdsempty(),c), bytes = sdsempty();
 
@@ -1433,7 +1433,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
      * corresponding part of the replication stream, will be propagated to
      * the sub-slaves and to the replication backlog. */
     if (!(c->flags & CLIENT_MASTER)) {
-        processInputBuffer(c);
+        processInputBuffer(c);      // 从c->querybuf中解析客户端命令到c->argv/c->argc中
     } else {
         size_t prev_offset = c->reploff;
         processInputBuffer(c);

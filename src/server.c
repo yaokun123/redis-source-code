@@ -1478,7 +1478,18 @@ void initServerConfig(void) {
      * redis.conf using the rename-command directive. */
     server.commands = dictCreate(&commandTableDictType,NULL);
     server.orig_commands = dictCreate(&commandTableDictType,NULL);
+
+
+
+
+    // 映射命令到方法
     populateCommandTable();
+
+
+
+
+
+
     server.delCommand = lookupCommandByCString("del");
     server.multiCommand = lookupCommandByCString("multi");
     server.lpushCommand = lookupCommandByCString("lpush");
@@ -2188,7 +2199,14 @@ void call(client *c, int flags) {
     /* Call the command. */
     dirty = server.dirty;
     start = ustime();
-    c->cmd->proc(c);
+
+
+
+    c->cmd->proc(c);            //// 执行命令
+
+
+
+    
     duration = ustime()-start;
     dirty = server.dirty-dirty;
     if (dirty < 0) dirty = 0;
@@ -2282,29 +2300,18 @@ void call(client *c, int flags) {
     server.stat_numcommands++;
 }
 
-/* If this function gets called we already read a whole
- * command, arguments are in the client argv/argc fields.
- * processCommand() execute the command or prepare the
- * server for a bulk read from the client.
- *
- * If C_OK is returned the client is still alive and valid and
- * other operations can be performed by the caller. Otherwise
- * if C_ERR is returned the client was destroyed (i.e. after QUIT). */
+// 执行命令
 int processCommand(client *c) {
-    /* The QUIT command is handled separately. Normal command procs will
-     * go through checking for replication and QUIT will cause trouble
-     * when FORCE_REPLICATION is enabled and would be implemented in
-     * a regular command proc. */
-    if (!strcasecmp(c->argv[0]->ptr,"quit")) {
+    // c->argv[0]->ptr就是命令例如set/get/lpush等。。。
+    if (!strcasecmp(c->argv[0]->ptr,"quit")) {  // 如果是退出命令
         addReply(c,shared.ok);
         c->flags |= CLIENT_CLOSE_AFTER_REPLY;
         return C_ERR;
     }
 
-    /* Now lookup the command and check ASAP about trivial error conditions
-     * such as wrong arity, bad command name and so forth. */
+    // 从命令字典中找到命令字符串对应的redisCommand结构
     c->cmd = c->lastcmd = lookupCommand(c->argv[0]->ptr);
-    if (!c->cmd) {
+    if (!c->cmd) {// 未知命令
         flagTransaction(c);
         addReplyErrorFormat(c,"unknown command '%s'",
             (char*)c->argv[0]->ptr);
@@ -2317,7 +2324,7 @@ int processCommand(client *c) {
         return C_OK;
     }
 
-    /* Check if the user is authenticated */
+    // 账号密码验证
     if (server.requirepass && !c->authenticated && c->cmd->proc != authCommand)
     {
         flagTransaction(c);
@@ -2329,6 +2336,7 @@ int processCommand(client *c) {
      * However we don't perform the redirection if:
      * 1) The sender of this command is our master.
      * 2) The command has no key arguments. */
+    // 集群相关
     if (server.cluster_enabled &&
         !(c->flags & CLIENT_MASTER) &&
         !(c->flags & CLIENT_LUA &&
@@ -2351,11 +2359,7 @@ int processCommand(client *c) {
         }
     }
 
-    /* Handle the maxmemory directive.
-     *
-     * First we try to free some memory if possible (if there are volatile
-     * keys in the dataset). If there are not the only thing we can do
-     * is returning an error. */
+    // 释放一些内存
     if (server.maxmemory) {
         int retval = freeMemoryIfNeeded();
         /* freeMemoryIfNeeded may flush slave output buffers. This may result
@@ -2373,6 +2377,7 @@ int processCommand(client *c) {
 
     /* Don't accept write commands if there are problems persisting on disk
      * and if this is a master instance. */
+    // 主节点，磁盘异常，不执行写命令
     if (((server.stop_writes_on_bgsave_err &&
           server.saveparamslen > 0 &&
           server.lastbgsave_status == C_ERR) ||
@@ -2394,6 +2399,7 @@ int processCommand(client *c) {
 
     /* Don't accept write commands if there are not enough good slaves and
      * user configured the min-slaves-to-write option. */
+    // 如果没有足够的slaves节点，也不执行写命令
     if (server.masterhost == NULL &&
         server.repl_min_slaves_to_write &&
         server.repl_min_slaves_max_lag &&
@@ -2407,6 +2413,7 @@ int processCommand(client *c) {
 
     /* Don't accept write commands if this is a read only slave. But
      * accept write commands if this is our master. */
+    // 如果是只读slave节点，不执行写命令
     if (server.masterhost && server.repl_slave_ro &&
         !(c->flags & CLIENT_MASTER) &&
         c->cmd->flags & CMD_WRITE)
@@ -2416,6 +2423,7 @@ int processCommand(client *c) {
     }
 
     /* Only allow SUBSCRIBE and UNSUBSCRIBE in the context of Pub/Sub */
+    // 订阅相关
     if (c->flags & CLIENT_PUBSUB &&
         c->cmd->proc != pingCommand &&
         c->cmd->proc != subscribeCommand &&
@@ -2428,6 +2436,7 @@ int processCommand(client *c) {
 
     /* Only allow INFO and SLAVEOF when slave-serve-stale-data is no and
      * we are a slave with a broken link with master. */
+    // 主从相关
     if (server.masterhost && server.repl_state != REPL_STATE_CONNECTED &&
         server.repl_serve_stale_data == 0 &&
         !(c->cmd->flags & CMD_STALE))
@@ -2439,12 +2448,14 @@ int processCommand(client *c) {
 
     /* Loading DB? Return an error if the command has not the
      * CMD_LOADING flag. */
+    // 正在加载数据，不执行命令
     if (server.loading && !(c->cmd->flags & CMD_LOADING)) {
         addReply(c, shared.loadingerr);
         return C_OK;
     }
 
     /* Lua script too slow? Only allow a limited number of commands. */
+    // lua脚本相关
     if (server.lua_timedout &&
           c->cmd->proc != authCommand &&
           c->cmd->proc != replconfCommand &&
@@ -2461,6 +2472,7 @@ int processCommand(client *c) {
     }
 
     /* Exec the command */
+    //// 真正执行命令
     if (c->flags & CLIENT_MULTI &&
         c->cmd->proc != execCommand && c->cmd->proc != discardCommand &&
         c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)
@@ -2468,7 +2480,7 @@ int processCommand(client *c) {
         queueMultiCommand(c);
         addReply(c,shared.queued);
     } else {
-        call(c,CMD_CALL_FULL);
+        call(c,CMD_CALL_FULL);        //// 执行命令
         c->woff = server.master_repl_offset;
         if (listLength(server.ready_keys))
             handleClientsBlockedOnLists();
@@ -3688,7 +3700,7 @@ int main(int argc, char **argv) {
 
 
 
-    // 初始化服务配置
+    // 初始化服务配置(会将命令映射到对应的函数上)
     initServerConfig();
 
 

@@ -67,7 +67,7 @@ typedef struct aeFileEvent {
     int mask;                   // 事件标记，读or写
     aeFileProc *rfileProc;      // 读事件处理函数
     aeFileProc *wfileProc;      // 写事件处理函数
-    void *clientData;           // 事件中包含的待处理数据
+    void *clientData;           // client
 } aeFileEvent;
 
 // 时间事件结构体

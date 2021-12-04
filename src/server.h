@@ -675,7 +675,7 @@ typedef struct client {
     int fd;                 /* Client socket. */
     redisDb *db;                                                                // 当前数据库
     robj *name;             /* As set by CLIENT SETNAME. */
-    sds querybuf;           /* Buffer we use to accumulate client queries. */
+    sds querybuf;           //// Buffer we use to accumulate client queries. */
     sds pending_querybuf;   /* If this is a master, this buffer represents the
                                yet not applied replication stream that we
                                are receiving from the master. */
@@ -683,9 +683,9 @@ typedef struct client {
     int argc;                                                                   // 参数个数
     robj **argv;                                                                // 命令参数
     struct redisCommand *cmd, *lastcmd;  /* Last command executed. */
-    int reqtype;            /* Request protocol type: PROTO_REQ_* */
-    int multibulklen;       /* Number of multi bulk arguments left to read. */
-    long bulklen;           /* Length of bulk argument in multi bulk request. */
+    int reqtype;            //// Request protocol type: PROTO_REQ_*
+    int multibulklen;       //// Number of multi bulk arguments left to read
+    long bulklen;           //// Length of bulk argument in multi bulk request. */
     list *reply;            /* List of reply objects to send to the client. */
     unsigned long long reply_bytes; /* Tot bytes of objects in reply list. */
     size_t sentlen;         /* Amount of bytes already sent in the current
@@ -694,7 +694,7 @@ typedef struct client {
     time_t lastinteraction; /* Time of the last interaction, used for timeout */
     time_t obuf_soft_limit_reached_time;
     int flags;              /* Client flags: CLIENT_* macros. */
-    int authenticated;      /* When requirepass is non-NULL. */
+    int authenticated;      //// When requirepass is non-NULL
     int replstate;          /* Replication state if this is a slave. */
     int repl_put_online_on_ack; /* Install slave write handler on ACK. */
     int repldbfd;           /* Replication DB file descriptor. */
@@ -876,8 +876,8 @@ struct redisServer {
     char **exec_argv;           /* Executable argv vector (copy). */
     int hz;                     /* serverCron() calls frequency in hertz */
     redisDb *db;                                                                // 指向Redis的数据库
-    dict *commands;             /* Command table */
-    dict *orig_commands;        /* Command table before command renaming. */
+    dict *commands;             //// Command table
+    dict *orig_commands;        //// Command table before command renaming. */
     aeEventLoop *el;
     unsigned int lruclock;      /* Clock for LRU eviction */
     int shutdown_asap;          /* SHUTDOWN needed ASAP */
@@ -909,9 +909,9 @@ struct redisServer {
     int sofd;                               //// Unix socket file descriptor
     int cfd[CONFIG_BINDADDR_MAX];/* Cluster bus listening socket */
     int cfd_count;              /* Used slots in cfd[] */
-    list *clients;              /* List of active clients */
+    list *clients;              //// List of active clients
     list *clients_to_close;     /* Clients to close asynchronously */
-    list *clients_pending_write; /* There is to write or install handler. */
+    list *clients_pending_write; //// There is to write or install handler. */
     list *slaves, *monitors;    /* List of slaves and MONITORs */
     client *current_client; /* Current client, only used on crash report */
     int clients_paused;         /* True if clients are currently paused */
@@ -977,7 +977,7 @@ struct redisServer {
     int active_defrag_threshold_upper; /* maximum percentage of fragmentation at which we use maximum effort */
     int active_defrag_cycle_min;       /* minimal effort for defrag in CPU percentage */
     int active_defrag_cycle_max;       /* maximal effort for defrag in CPU percentage */
-    size_t client_max_querybuf_len; /* Limit for client query buffer length */
+    size_t client_max_querybuf_len; //// Limit for client query buffer length
     int dbnum;                                                                          // 表明数据库的数量
     int supervised;                 /* 1 if supervised, 0 otherwise. */
     int supervised_mode;            /* See SUPERVISED_* */
@@ -1110,10 +1110,10 @@ struct redisServer {
     unsigned int repl_scriptcache_size; /* Max number of elements. */
     /* Synchronous replication. */
     list *clients_waiting_acks;         /* Clients waiting in WAIT command. */
-    int get_ack_from_slaves;            /* If true we send REPLCONF GETACK. */
+    int get_ack_from_slaves;            //// If true we send REPLCONF GETACK. */
     /* Limits */
-    unsigned int maxclients;            /* Max number of simultaneous clients */
-    unsigned long long maxmemory;   /* Max number of memory bytes to use */
+    unsigned int maxclients;            //// Max number of simultaneous clients
+    unsigned long long maxmemory;   ///// Max number of memory bytes to use */
     int maxmemory_policy;           /* Policy for key eviction */
     int maxmemory_samples;          /* Pricision of random sampling */
     unsigned int lfu_log_factor;    /* LFU logarithmic counter factor. */
