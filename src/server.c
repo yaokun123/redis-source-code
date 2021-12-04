@@ -1872,9 +1872,9 @@ void initServer(void) {
     server.repl_good_slaves_count = 0;
     updateCachedTime();
 
-    /* Create the timer callback, this is our way to process many background
-     * operations incrementally, like clients timeout, eviction of unaccessed
-     * expired keys and so forth. */
+    // 关于时间事件，前面我们提到的AOF和RDB持久化以及过期键的处理等操作中，都设计到定时操作
+    // 时间事件就是为了这些定时操作而设定的，在特定的时间触发时间事件，并进行相应的处理。
+    // 创建时间事件，用于处理定时任务
     if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         serverPanic("Can't create event loop timers.");
         exit(1);

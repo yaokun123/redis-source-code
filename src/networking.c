@@ -67,18 +67,20 @@ int listMatchObjects(void *a, void *b) {
     return equalStringObjects(a,b);
 }
 
+// 根据cfd客户端连接套接字，创建一个client结构体
 client *createClient(int fd) {
-    client *c = zmalloc(sizeof(client));
+    client *c = zmalloc(sizeof(client));        // 分配空间
 
-    /* passing -1 as fd it is possible to create a non connected client.
-     * This is useful since all the commands needs to be executed
-     * in the context of a client. When commands are executed in other
-     * contexts (for instance a Lua script) we need a non connected client. */
+    // 通过-1作为fd可以创建一个未连接的客户端。
+    // 这很有用，因为所有的命令都需要在客户端上下文中执行。
+    // 当命令在其他上下文中执行时(例如Lua脚本)，我们需要一个未连接的客户端
     if (fd != -1) {
         anetNonBlock(NULL,fd);
         anetEnableTcpNoDelay(NULL,fd);
         if (server.tcpkeepalive)
             anetKeepAlive(NULL,fd,server.tcpkeepalive);
+
+        // 将客户端连接套接字，加入到文件事件里aeEventLoop.events
         if (aeCreateFileEvent(server.el,fd,AE_READABLE,
             readQueryFromClient, c) == AE_ERR)
         {
@@ -88,9 +90,11 @@ client *createClient(int fd) {
         }
     }
 
-    selectDb(c,0);
+    selectDb(c,0);              // 刚创建的client默认选择db0
     uint64_t client_id;
     atomicGetIncr(server.next_client_id,client_id,1);
+
+    // 初始化客户端的一些属性
     c->id = client_id;
     c->fd = fd;
     c->name = NULL;
@@ -601,9 +605,13 @@ int clientHasPendingReplies(client *c) {
     return c->bufpos || listLength(c->reply);
 }
 
-#define MAX_ACCEPTS_PER_CALL 1000
+#define MAX_ACCEPTS_PER_CALL 1000       // 默认的最大连接请求个数
+
+// 对cfd客户端连接套接字进行封装，加入文件事件循环等
 static void acceptCommonHandler(int fd, int flags, char *ip) {
     client *c;
+
+    // 新用户连接的时候需要创建client结构体，此时就需要创建文件事件，用来监听其读写操作
     if ((c = createClient(fd)) == NULL) {
         serverLog(LL_WARNING,
             "Error registering fd event for the new client: %s (fd=%d)",
@@ -672,14 +680,17 @@ static void acceptCommonHandler(int fd, int flags, char *ip) {
     c->flags |= flags;
 }
 
+// 监听redis服务端 tcp套接字(ipv4/ipv6) 可读时会调用该函数
+// 创建客户端连接
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
-    int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
+    int cport, cfd, max = MAX_ACCEPTS_PER_CALL;     // 默认最大接受客户端10000个连接
     char cip[NET_IP_STR_LEN];
     UNUSED(el);
     UNUSED(mask);
     UNUSED(privdata);
 
     while(max--) {
+        // 客户端连接套接字cfd = client fd
         cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
         if (cfd == ANET_ERR) {
             if (errno != EWOULDBLOCK)
@@ -688,6 +699,8 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
             return;
         }
         serverLog(LL_VERBOSE,"Accepted %s:%d", cip, cport);
+
+        // 对cfd套接字进行封装，包装client结构体、加入文件事件等。。。
         acceptCommonHandler(cfd,0,cip);
     }
 }

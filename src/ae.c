@@ -190,10 +190,13 @@ static void aeGetTime(long *seconds, long *milliseconds)
     *milliseconds = tv.tv_usec/1000;
 }
 
+// 处理时间时间的执行时间（秒/毫秒）
 static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) {
     long cur_sec, cur_ms, when_sec, when_ms;
 
+    // 获取当前时间（秒/毫秒）
     aeGetTime(&cur_sec, &cur_ms);
+
     when_sec = cur_sec + milliseconds/1000;
     when_ms = cur_ms + milliseconds%1000;
     if (when_ms >= 1000) {
@@ -216,8 +219,12 @@ long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
     if (te == NULL) return AE_ERR;
     te->id = id;                                    // 分配唯一标识
 
-    //
+    // when_sec = 1638587231
+    // when_ms = 306
+    // 设置时间事件的执行时间，秒/毫秒
     aeAddMillisecondsToNow(milliseconds,&te->when_sec,&te->when_ms);
+
+    // 设置时间时间的相关属性
     te->timeProc = proc;
     te->finalizerProc = finalizerProc;
     te->clientData = clientData;
