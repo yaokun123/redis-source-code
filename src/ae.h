@@ -95,7 +95,7 @@ typedef struct aeEventLoop {
     long long timeEventNextId;  // 下一个时间事件的id，用于生成时间事件的唯一标识
     time_t lastTime;            // 上一次事件循环的时间，用于检测系统时间是否变更
     aeFileEvent *events;        // 注册要使用的文件事件
-    aeFiredEvent *fired;        // 已准备好，待处理的时间
+    aeFiredEvent *fired;        // 已准备好，待处理的文件事件
     aeTimeEvent *timeEventHead; // 时间事件头，因为事件时间其实是一个链表
     int stop;                   // 停止标识，1表示停止
     void *apidata;              // 用于处理底层特定的API数据，对于epoll来说，其包括epoll_fd和epoll_event

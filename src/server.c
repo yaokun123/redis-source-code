@@ -3848,7 +3848,13 @@ int main(int argc, char **argv) {
 
     aeSetBeforeSleepProc(server.el,beforeSleep);
     aeSetAfterSleepProc(server.el,afterSleep);
+
+
+    // 事件循环主函数
     aeMain(server.el);
+
+
+
     aeDeleteEventLoop(server.el);
     return 0;
 }

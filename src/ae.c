@@ -44,8 +44,7 @@
 #include "zmalloc.h"
 #include "config.h"
 
-/* Include the best multiplexing layer supported by this system.
- * The following should be ordered by performances, descending. */
+// 包括本系统所支持的最佳多路复用层以下应按性能降序排列
 #ifdef HAVE_EVPORT
 #include "ae_evport.c"
 #else
@@ -250,22 +249,13 @@ int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id)
     return AE_ERR; /* NO event with the specified ID found */
 }
 
-/* Search the first timer to fire.
- * This operation is useful to know how many time the select can be
- * put in sleep without to delay any event.
- * If there are no timers NULL is returned.
- *
- * Note that's O(N) since time events are unsorted.
- * Possible optimizations (not needed by Redis so far, but...):
- * 1) Insert the event in order, so that the nearest is just the head.
- *    Much better but still insertion or deletion of timers is O(N).
- * 2) Use a skiplist to have this operation as O(1) and insertion as O(log(N)).
- */
+// 获取最近的时间事件
 static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
 {
     aeTimeEvent *te = eventLoop->timeEventHead;
     aeTimeEvent *nearest = NULL;
 
+    // 遍历时间事件链表，找出最近要执行的事件
     while(te) {
         if (!nearest || te->when_sec < nearest->when_sec ||
                 (te->when_sec == nearest->when_sec &&
@@ -351,47 +341,37 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
     return processed;
 }
 
-/* Process every pending time event, then every pending file event
- * (that may be registered by time event callbacks just processed).
- * Without special flags the function sleeps until some file event
- * fires, or when the next time event occurs (if any).
- *
- * If flags is 0, the function does nothing and returns.
- * if flags has AE_ALL_EVENTS set, all the kind of events are processed.
- * if flags has AE_FILE_EVENTS set, file events are processed.
- * if flags has AE_TIME_EVENTS set, time events are processed.
- * if flags has AE_DONT_WAIT set the function returns ASAP until all
- * if flags has AE_CALL_AFTER_SLEEP set, the aftersleep callback is called.
- * the events that's possible to process without to wait are processed.
- *
- * The function returns the number of events processed. */
+// 事件处理函数
 int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 {
     int processed = 0, numevents;
 
-    /* Nothing to do? return ASAP */
+    // 没有需要处理的事件就直接返回
     if (!(flags & AE_TIME_EVENTS) && !(flags & AE_FILE_EVENTS)) return 0;
 
-    /* Note that we want call select() even if there are no
-     * file events to process as long as we want to process time
-     * events, in order to sleep until the next time event is ready
-     * to fire. */
+    // 即使没有要处理的文件事件，只要我们想处理时间事件就需要调用select()函数
+    // 这是为了睡眠直到下一个时间事件准备好。
     if (eventLoop->maxfd != -1 ||
         ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
         int j;
         aeTimeEvent *shortest = NULL;
         struct timeval tv, *tvp;
 
+        // 获取最近的时间事件
         if (flags & AE_TIME_EVENTS && !(flags & AE_DONT_WAIT))
             shortest = aeSearchNearestTimer(eventLoop);
+
+
         if (shortest) {
+            // 运行到这里说明时间事件存在，则根据最近可执行时间事件和现在的时间的时间差
+            // 来决定文件事件的阻塞事件
             long now_sec, now_ms;
 
-            aeGetTime(&now_sec, &now_ms);
+            aeGetTime(&now_sec, &now_ms);       // 获取当前时间(秒/毫秒)
             tvp = &tv;
 
-            /* How many milliseconds we need to wait for the next
-             * time event to fire? */
+            // 计算下一次时间事件准备好的时间
+            // 我们需要等待下一次事件触发多少毫秒
             long long ms =
                 (shortest->when_sec - now_sec)*1000 +
                 shortest->when_ms - now_ms;
@@ -400,13 +380,13 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
                 tvp->tv_sec = ms/1000;
                 tvp->tv_usec = (ms % 1000)*1000;
             } else {
+                // 时间差小于0，代表可以处理了
                 tvp->tv_sec = 0;
                 tvp->tv_usec = 0;
             }
         } else {
-            /* If we have to check for events but need to return
-             * ASAP because of AE_DONT_WAIT we need to set the timeout
-             * to zero */
+            // 执行到这里，说明没有待处理的时间事件
+            // 此时根据AE_DONT_WAIT参数来决定是否设置阻塞和阻塞的时间
             if (flags & AE_DONT_WAIT) {
                 tv.tv_sec = tv.tv_usec = 0;
                 tvp = &tv;
@@ -416,27 +396,28 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             }
         }
 
-        /* Call the multiplexing API, will return only on timeout or when
-         * some event fires. */
+        // 调用I/O复用函数获取已准备好的事件
         numevents = aeApiPoll(eventLoop, tvp);
 
-        /* After sleep callback. */
+        // 回调函数
         if (eventLoop->aftersleep != NULL && flags & AE_CALL_AFTER_SLEEP)
             eventLoop->aftersleep(eventLoop);
 
+        // 遍历已经准备好的文件事件
         for (j = 0; j < numevents; j++) {
+            // 从已就绪事件中获取事件
             aeFileEvent *fe = &eventLoop->events[eventLoop->fired[j].fd];
             int mask = eventLoop->fired[j].mask;
             int fd = eventLoop->fired[j].fd;
             int rfired = 0;
 
-	    /* note the fe->mask & mask & ... code: maybe an already processed
-             * event removed an element that fired and we still didn't
-             * processed, so we check if the event is still valid. */
+            // 如果为读事件则调用读事件处理函数
             if (fe->mask & mask & AE_READABLE) {
                 rfired = 1;
                 fe->rfileProc(eventLoop,fd,fe->clientData,mask);
             }
+
+            // 如果为写事件则调用写事件处理函数
             if (fe->mask & mask & AE_WRITABLE) {
                 if (!rfired || fe->wfileProc != fe->rfileProc)
                     fe->wfileProc(eventLoop,fd,fe->clientData,mask);
@@ -444,11 +425,12 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             processed++;
         }
     }
-    /* Check time events */
+
+    // 处理时间事件，记住，此处说明Redis的文件事件优先于时间事件
     if (flags & AE_TIME_EVENTS)
         processed += processTimeEvents(eventLoop);
 
-    return processed; /* return the number of processed file/time events */
+    return processed; // 返回处理的事件个数
 }
 
 /* Wait for milliseconds until the given file descriptor becomes
@@ -473,11 +455,14 @@ int aeWait(int fd, int mask, long long milliseconds) {
     }
 }
 
+// 事件循环主函数
 void aeMain(aeEventLoop *eventLoop) {
-    eventLoop->stop = 0;
+    eventLoop->stop = 0;    // 开启事件循环
     while (!eventLoop->stop) {
         if (eventLoop->beforesleep != NULL)
             eventLoop->beforesleep(eventLoop);
+
+        // 事件处理函数
         aeProcessEvents(eventLoop, AE_ALL_EVENTS|AE_CALL_AFTER_SLEEP);
     }
 }
