@@ -1896,8 +1896,7 @@ void initServer(void) {
         acceptUnixHandler,NULL) == AE_ERR) serverPanic("Unrecoverable error creating server.sofd file event.");
 
 
-    /* Register a readable event for the pipe used to awake the event loop
-     * when a blocked client in a module needs attention. */
+    // 为管道注册一个可读的事件，用于在模块中需要注意阻塞的客户端时唤醒事件循环
     if (aeCreateFileEvent(server.el, server.module_blocked_pipe[0], AE_READABLE,
         moduleBlockedClientPipeReadable,NULL) == AE_ERR) {
             serverPanic(
@@ -1905,7 +1904,7 @@ void initServer(void) {
                 "blocked clients subsystem.");
     }
 
-    /* Open the AOF file if needed. */
+    // aof如果打开，设置server.aof_fd文件描述符
     if (server.aof_state == AOF_ON) {
         server.aof_fd = open(server.aof_filename,
                                O_WRONLY|O_APPEND|O_CREAT,0644);
@@ -1916,22 +1915,27 @@ void initServer(void) {
         }
     }
 
-    /* 32 bit instances are limited to 4GB of address space, so if there is
-     * no explicit limit in the user provided configuration we set a limit
-     * at 3 GB using maxmemory with 'noeviction' policy'. This avoids
-     * useless crashes of the Redis instance for out of memory. */
+    // 32位实例的地址空间限制为4GB，所以如果在用户提供的配置中没有显式的限制，
+    // 我们使用“noeviction”策略将最大内存限制为3gb。
+    // 这避免了Redis实例由于内存不足而出现无用的崩溃
     if (server.arch_bits == 32 && server.maxmemory == 0) {
         serverLog(LL_WARNING,"Warning: 32 bit instance detected but no memory limit set. Setting 3 GB maxmemory limit with 'noeviction' policy now.");
         server.maxmemory = 3072LL*(1024*1024); /* 3 GB */
         server.maxmemory_policy = MAXMEMORY_NO_EVICTION;
     }
 
+    // 集群模式
     if (server.cluster_enabled) clusterInit();
+
+
+
     replicationScriptCacheInit();
-    scriptingInit(1);
-    slowlogInit();
+    scriptingInit(1);           // 脚本初始化
+    slowlogInit();                   // 慢日志初始化
     latencyMonitorInit();
     bioInit();
+
+    // 初始化所使用的内存大小
     server.initial_memory_usage = zmalloc_used_memory();
 }
 
