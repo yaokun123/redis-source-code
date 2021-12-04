@@ -693,11 +693,14 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
         // 客户端连接套接字cfd = client fd
         cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
         if (cfd == ANET_ERR) {
+            // 连接出错
             if (errno != EWOULDBLOCK)
                 serverLog(LL_WARNING,
                     "Accepting client connection: %s", server.neterr);
             return;
         }
+
+        // 记录日志
         serverLog(LL_VERBOSE,"Accepted %s:%d", cip, cport);
 
         // 对cfd套接字进行封装，包装client结构体、加入文件事件等。。。
