@@ -638,9 +638,8 @@ void freeFakeClient(struct client *c) {
     zfree(c);
 }
 
-/* Replay the append log file. On success C_OK is returned. On non fatal
- * error (the append only file is zero-length) C_ERR is returned. On
- * fatal error an error message is logged and the program exists. */
+// 当数据存储在AOF文件中后，服务器在下一次重启需要载入数据，AOF数据载入比较有意思，其会开一个伪Redis客户端
+// 然后模仿客户端对服务器执行命令的过程，将AOF中存储的命令一一执行，执行完毕后服务器数据库中的数据就和上次一样了。
 int loadAppendOnlyFile(char *filename) {
     struct client *fakeClient;
     FILE *fp = fopen(filename,"r");
@@ -664,10 +663,10 @@ int loadAppendOnlyFile(char *filename) {
         return C_ERR;
     }
 
-    /* Temporarily disable AOF, to prevent EXEC from feeding a MULTI
-     * to the same file we're about to read. */
+    // 临时关闭aof
     server.aof_state = AOF_OFF;
 
+    //// 创建伪客户端
     fakeClient = createFakeClient();
     startLoading(fp);
 

@@ -1098,8 +1098,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     }
 
 
-    /* AOF postponed flush: Try at every cron cycle if the slow fsync
-     * completed. */
+    // 刷新aof fsync
     if (server.aof_flush_postponed_start) flushAppendOnlyFile(0);
 
     /* AOF write errors: in this case we have a buffer to flush as well and
@@ -1201,7 +1200,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
     if (listLength(server.unblocked_clients))
         processUnblockedClients();
 
-    /* Write the AOF buffer on disk */
+    // 刷新aof fsync
     flushAppendOnlyFile(0);
 
     /* Handle writes with pending output buffers. */
