@@ -1433,7 +1433,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
      * corresponding part of the replication stream, will be propagated to
      * the sub-slaves and to the replication backlog. */
     if (!(c->flags & CLIENT_MASTER)) {
-        processInputBuffer(c);      // 从c->querybuf中解析客户端命令到c->argv/c->argc中
+        processInputBuffer(c);      //// 从c->querybuf中解析客户端命令到c->argv/c->argc中
     } else {
         size_t prev_offset = c->reploff;
         processInputBuffer(c);

@@ -1916,7 +1916,7 @@ void initServer(void) {
     }
 
     // aof如果打开，设置server.aof_fd文件描述符
-    if (server.aof_state == AOF_ON) {
+    if (server.aof_state == AOF_ON) {// 0/1/2
         server.aof_fd = open(server.aof_filename,
                                O_WRONLY|O_APPEND|O_CREAT,0644);
         if (server.aof_fd == -1) {
@@ -2078,10 +2078,11 @@ struct redisCommand *lookupCommandOrOriginal(sds name) {
  * This should not be used inside commands implementation. Use instead
  * alsoPropagate(), preventCommandPropagation(), forceCommandPropagation().
  */
+//// aof
 void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
                int flags)
 {
-    if (server.aof_state != AOF_OFF && flags & PROPAGATE_AOF)
+    if (server.aof_state != AOF_OFF && flags & PROPAGATE_AOF)   // aof打开
         feedAppendOnlyFile(cmd,dbid,argv,argc);
     if (flags & PROPAGATE_REPL)
         replicationFeedSlaves(server.slaves,dbid,argv,argc);
@@ -2206,7 +2207,7 @@ void call(client *c, int flags) {
 
 
 
-    
+
     duration = ustime()-start;
     dirty = server.dirty-dirty;
     if (dirty < 0) dirty = 0;
@@ -2228,6 +2229,7 @@ void call(client *c, int flags) {
 
     /* Log the command into the Slow log if needed, and populate the
      * per-command statistics that we show in INFO commandstats. */
+    // 慢日志
     if (flags & CMD_CALL_SLOWLOG && c->cmd->proc != execCommand) {
         char *latency_event = (c->cmd->flags & CMD_FAST) ?
                               "fast-command" : "command";
@@ -2239,7 +2241,7 @@ void call(client *c, int flags) {
         c->lastcmd->calls++;
     }
 
-    /* Propagate the command into the AOF and replication link */
+    // aof 和 复制相关
     if (flags & CMD_CALL_PROPAGATE &&
         (c->flags & CLIENT_PREVENT_PROP) != CLIENT_PREVENT_PROP)
     {
