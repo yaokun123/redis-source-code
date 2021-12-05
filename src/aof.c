@@ -1152,13 +1152,7 @@ werr:
     return C_ERR;
 }
 
-/* Write a sequence of commands able to fully rebuild the dataset into
- * "filename". Used both by REWRITEAOF and BGREWRITEAOF.
- *
- * In order to minimize the number of commands needed in the rewritten
- * log Redis uses variadic commands when possible, such as RPUSH, SADD
- * and ZADD. However at max AOF_REWRITE_ITEMS_PER_CMD items per time
- * are inserted using a single command. */
+// AOF重写功能实现
 int rewriteAppendOnlyFile(char *filename) {
     rio aof;
     FILE *fp;
