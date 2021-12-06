@@ -986,28 +986,32 @@ struct redisServer {
 
 
     /* AOF persistence */
-    int aof_state;                  //// AOF_(ON|OFF|WAIT_REWRITE)
-    int aof_fsync;                  /* Kind of fsync() policy */
-    char *aof_filename;             //// Name of the AOF file
+    //// 命令写入aof_buf相关操作
+    int aof_state;                  //// AOF_(ON-0|OFF-1|WAIT_REWRITE-2)
+    int aof_fsync;                  //// 标记了命令记录被同步写入磁盘AOF文件的策略(AOF_FSYNC_NO-0|AOF_FSYNC_ALWAYS-1|AOF_FSYNC_EVERYSEC-2)
+    char *aof_filename;             //// AOF文件的文件名。
+    sds aof_buf;                    //// AOF策略的内存缓冲，命令记录先被写入这个内存缓冲之中，然后在写入文件的内核缓冲区。
+    int aof_fd;                     //// AOF文件对应的文件描述符
+    int aof_selected_db;            //// 上一条被记录的命令对应的数据库编号，如果新的命令对应数据库发生变化，需要补充追加一条SELECT命令的记录
+
+    //// AOF内存缓存（aof_buf）是如何被写入到磁盘文件之中
+    off_t aof_current_size;         //// 表示当前AOF文件的大小
+    time_t aof_last_fsync;          //// 记录了上次AOF数据写入磁盘的时间戳
+    time_t aof_flush_postponed_start;//// 标记是否延时启动AOF写入，如果当前有正在后台运行的线程执行AOF磁盘写入，那么这个标记将会被设置，通过wirte系统调用写入AOF的操作将会被推迟
+    int aof_last_write_status;      //// 记录了上次调用write系统调用的结果，可以为C_OK或者C_ERR，如果内核的文件缓冲区已满，那么write有可能失败
+
     int aof_no_fsync_on_rewrite;    /* Don't fsync if a rewrite is in prog. */
     int aof_rewrite_perc;           //// Rewrite AOF if % growth is > M and... */
     off_t aof_rewrite_min_size;     //// the AOF file is at least N bytes. */
     off_t aof_rewrite_base_size;    /* AOF size on latest startup or rewrite. */
-    off_t aof_current_size;         /* AOF current size. */
     int aof_rewrite_scheduled;      /* Rewrite once BGSAVE terminates. */
     pid_t aof_child_pid;            //// PID if rewriting process
     list *aof_rewrite_buf_blocks;   //// Hold changes during an AOF rewrite. */
-    sds aof_buf;      //// AOF buffer, written before entering the event loop
-    int aof_fd;       //// File descriptor of currently selected AOF file
-    int aof_selected_db; //// Currently selected DB in AOF
-    time_t aof_flush_postponed_start; //// UNIX time of postponed AOF flush
-    time_t aof_last_fsync;            /* UNIX time of last fsync() */
     time_t aof_rewrite_time_last;   /* Time used by last AOF rewrite run. */
     time_t aof_rewrite_time_start;  /* Current AOF rewrite start time. */
     int aof_lastbgrewrite_status;   /* C_OK or C_ERR */
     unsigned long aof_delayed_fsync;  /* delayed AOF fsync() counter */
     int aof_rewrite_incremental_fsync;//// fsync incrementally while rewriting?
-    int aof_last_write_status;      /* C_OK or C_ERR */
     int aof_last_write_errno;       /* Valid if aof_last_write_status is ERR */
     int aof_load_truncated;         /* Don't stop on unexpected AOF EOF. */
     int aof_use_rdb_preamble;       //// Use RDB preamble on AOF rewrites. */

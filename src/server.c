@@ -1103,13 +1103,10 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     }
 
 
-    // 刷新aof fsync
+    // 刷新aof_buf中的数据到文件中
     if (server.aof_flush_postponed_start) flushAppendOnlyFile(0);
 
-    /* AOF write errors: in this case we have a buffer to flush as well and
-     * clear the AOF error in case of success to make the DB writable again,
-     * however to try every second is enough in case of 'hz' is set to
-     * an higher frequency. */
+    // 上次aof 刷新缓存区失败。重试1s
     run_with_period(1000) {
         if (server.aof_last_write_status == C_ERR)
             flushAppendOnlyFile(0);
@@ -1160,9 +1157,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     return 1000/server.hz;
 }
 
-/* This function gets called every time Redis is entering the
- * main loop of the event driven library, that is, before to sleep
- * for ready file descriptors. */
+// 在Redis服务器的心跳函数
 void beforeSleep(struct aeEventLoop *eventLoop) {
     UNUSED(eventLoop);
 
@@ -1205,7 +1200,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
     if (listLength(server.unblocked_clients))
         processUnblockedClients();
 
-    // 刷新aof fsync
+    // 刷新aof 缓存（aof_buf）到文件
     flushAppendOnlyFile(0);
 
     /* Handle writes with pending output buffers. */
@@ -1919,7 +1914,7 @@ void initServer(void) {
                 "blocked clients subsystem.");
     }
 
-    // aof如果打开，设置server.aof_fd文件描述符
+    // Redis在启动服务器时，会根据配置，打开AOF文件，并将对应文件描述符记录在redisServer.aof_fd字段上
     if (server.aof_state == AOF_ON) {// 0/1/2
         server.aof_fd = open(server.aof_filename,
                                O_WRONLY|O_APPEND|O_CREAT,0644);
@@ -2071,18 +2066,7 @@ struct redisCommand *lookupCommandOrOriginal(sds name) {
     return cmd;
 }
 
-/* Propagate the specified command (in the context of the specified database id)
- * to AOF and Slaves.
- *
- * flags are an xor between:
- * + PROPAGATE_NONE (no propagation of command at all)
- * + PROPAGATE_AOF (propagate into the AOF file if is enabled)
- * + PROPAGATE_REPL (propagate into the replication link)
- *
- * This should not be used inside commands implementation. Use instead
- * alsoPropagate(), preventCommandPropagation(), forceCommandPropagation().
- */
-//// aof
+// Redis在每次执行客户端命令时，会通过调用propagate函数，将这个命令传递给AOF内存缓存，或者发送给集群中的Slave实例：
 void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
                int flags)
 {
@@ -2511,6 +2495,7 @@ void closeListeningSockets(int unlink_unix_socket) {
     }
 }
 
+// Redis服务器准备关闭之前
 int prepareForShutdown(int flags) {
     int save = flags & SHUTDOWN_SAVE;
     int nosave = flags & SHUTDOWN_NOSAVE;
@@ -2543,7 +2528,9 @@ int prepareForShutdown(int flags) {
                 "There is a child rewriting the AOF. Killing it!");
             kill(server.aof_child_pid,SIGUSR1);
         }
-        /* Append only file: fsync() the AOF and exit */
+
+
+        // 刷新aof缓存（aof_buf） 到文件
         serverLog(LL_NOTICE,"Calling fsync() on the AOF file.");
         aof_fsync(server.aof_fd);
     }

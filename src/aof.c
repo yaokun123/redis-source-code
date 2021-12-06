@@ -288,7 +288,7 @@ int startAppendOnly(void) {
 #define AOF_WRITE_LOG_ERROR_RATE 30 /* Seconds between errors logging. */
 
 
-//// 将缓冲区的数据写入AOF文件中
+//// 将缓冲区的数据（aof_buf）写入AOF文件中
 void flushAppendOnlyFile(int force) {
     ssize_t nwritten;
     int sync_in_progress = 0;
@@ -300,6 +300,9 @@ void flushAppendOnlyFile(int force) {
     if (server.aof_fsync == AOF_FSYNC_EVERYSEC)
         sync_in_progress = bioPendingJobsOfType(BIO_AOF_FSYNC) != 0;
 
+    // 对于使用AOF_FSYNC_EVERYSEC策略的AOF持久化
+    // 如果有在后台运行的异步fsync操作，那么设置aof_flush_postponed_start
+    // 同时推迟这次的flushAppendOnlyFile操作
     if (server.aof_fsync == AOF_FSYNC_EVERYSEC && !force) {
         /* With this append fsync policy we do background fsyncing.
          * If the fsync is still in progress we can try to delay
@@ -321,11 +324,7 @@ void flushAppendOnlyFile(int force) {
             serverLog(LL_NOTICE,"Asynchronous AOF fsync is taking too long (disk is busy?). Writing the AOF buffer without waiting for fsync to complete, this may slow down Redis.");
         }
     }
-    /* We want to perform a single write. This should be guaranteed atomic
-     * at least if the filesystem we are writing is a real physical one.
-     * While this will save us against the server being killed I don't think
-     * there is much to do about the whole server stopping for power problems
-     * or alike */
+
 
     // 调用write命令将缓冲区的数据写入磁盘文件中，此处还监听了延迟
     latencyStartMonitor(latency);
@@ -526,14 +525,13 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
     sds buf = sdsempty();
     robj *tmpargv[3];
 
-    // 确保切换到了正确的数据库，如果没有则追加切换数据库命令
-    // dictid = c.db.id数据库唯一标识
+    // 如果操作的数据库dictid与上一条被执行的命令的数据库server.aof_selected_db不一致，那么补充追加一条SELECT命令记录
     if (dictid != server.aof_selected_db) {
         char seldb[64];
 
         snprintf(seldb,sizeof(seldb),"%d",dictid);
 
-        // 格式化命令数据
+        // 补充追加一条SELECT命令记录
         buf = sdscatprintf(buf,"*2\r\n$6\r\nSELECT\r\n$%lu\r\n%s\r\n",
             (unsigned long)strlen(seldb),seldb);
 
@@ -571,8 +569,7 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
             buf = catAppendOnlyExpireAtCommand(buf,server.pexpireCommand,argv[1],
                                                pxarg);
     } else {
-        // 追加其他一般的修改数据库操作的命令
-        // 通用格式化命令并写入到AOF缓冲区函数
+        // 这个函数用于将一条Redis命令按照一定格式写入一个sds缓冲区内
         buf = catAppendOnlyGenericCommand(buf,argc,argv);
     }
 
@@ -582,8 +579,7 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
     if (server.aof_state == AOF_ON)
         server.aof_buf = sdscatlen(server.aof_buf,buf,sdslen(buf));
 
-    //// 如果正在执行后台重写aof文件，
-    // 将命令追加到新的AOF文件中，避免重写的AOF文件与当前数据库有差异
+    //// 如果正在执行后台重写aof文件，还要将命令加入server.aof_rewrite_buf_blocks中
     if (server.aof_child_pid != -1)
         aofRewriteBufferAppend((unsigned char*)buf,sdslen(buf));
 
