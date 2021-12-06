@@ -1000,11 +1000,13 @@ struct redisServer {
     time_t aof_flush_postponed_start;//// 标记是否延时启动AOF写入，如果当前有正在后台运行的线程执行AOF磁盘写入，那么这个标记将会被设置，通过wirte系统调用写入AOF的操作将会被推迟
     int aof_last_write_status;      //// 记录了上次调用write系统调用的结果，可以为C_OK或者C_ERR，如果内核的文件缓冲区已满，那么write有可能失败
 
+    //// AOF 重写相关操作
+    off_t aof_rewrite_min_size;     //// 用于开启重写机制的AOF文件大小的阈值
+    off_t aof_rewrite_base_size;
+    int aof_rewrite_perc;           //// 这两个字段用于处理当AOF文件大小超过aof_rewrite_base_size的百分比，如果超过阈值，那么将开启重写机制。
+    int aof_rewrite_scheduled;      //// 是一个调度标记，BGREWRITEAOF命令并不会立即启动重写机制，而是设置好aof_rewrite_scheduled，在下一次心跳中去启动该机制
+
     int aof_no_fsync_on_rewrite;    /* Don't fsync if a rewrite is in prog. */
-    int aof_rewrite_perc;           //// Rewrite AOF if % growth is > M and... */
-    off_t aof_rewrite_min_size;     //// the AOF file is at least N bytes. */
-    off_t aof_rewrite_base_size;    /* AOF size on latest startup or rewrite. */
-    int aof_rewrite_scheduled;      /* Rewrite once BGSAVE terminates. */
     pid_t aof_child_pid;            //// PID if rewriting process
     list *aof_rewrite_buf_blocks;   //// Hold changes during an AOF rewrite. */
     time_t aof_rewrite_time_last;   /* Time used by last AOF rewrite run. */
