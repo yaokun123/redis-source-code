@@ -1081,15 +1081,20 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
             }
          }
 
-         /* Trigger an AOF rewrite if needed */
+        // 如果后台没有执行rdb，aof，以及aof重写操作，而且aof文件的大于执行BGREWRITEAOF所需的最小大小
          if (server.rdb_child_pid == -1 &&
              server.aof_child_pid == -1 &&
              server.aof_rewrite_perc &&
              server.aof_current_size > server.aof_rewrite_min_size)
          {
+             // 上一次完成AOF写入之后，AOF文件的大小
             long long base = server.aof_rewrite_base_size ?
                             server.aof_rewrite_base_size : 1;
+
+             // AOF文件当前的体积相对于base的体积百分比
             long long growth = (server.aof_current_size*100/base) - 100;
+
+             // 如果增长百分比超过了规定的aof_rewrite_perc，那么执行BGREWRITEAOF
             if (growth >= server.aof_rewrite_perc) {
                 serverLog(LL_NOTICE,"Starting automatic rewriting of AOF on %lld%% growth",growth);
                 rewriteAppendOnlyFileBackground();
