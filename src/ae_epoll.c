@@ -80,9 +80,13 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int delmask) {
 
 /**     取出已准备好的文件描述符        */
 static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
+    // 在eventloop结构体中，apidata字段保存的数据类型就是aeApiState
     aeApiState *state = eventLoop->apidata;
+
+
     int retval, numevents = 0;
 
+    // 调用epoll_wait
     retval = epoll_wait(state->epfd,state->events,eventLoop->setsize,
             tvp ? (tvp->tv_sec*1000 + tvp->tv_usec/1000) : -1);
     if (retval > 0) {
@@ -97,10 +101,14 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
             if (e->events & EPOLLOUT) mask |= AE_WRITABLE;
             if (e->events & EPOLLERR) mask |= AE_WRITABLE;
             if (e->events & EPOLLHUP) mask |= AE_WRITABLE;
+
+            // 添加到事件循环准备好的文件事件中
             eventLoop->fired[j].fd = e->data.fd;
             eventLoop->fired[j].mask = mask;
         }
     }
+
+    // 返回已经准备好的事件个数
     return numevents;
 }
 
