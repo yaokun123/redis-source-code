@@ -1665,7 +1665,7 @@ void checkTcpBacklogSettings(void) {
 #endif
 }
 
-// 初始化socket监听客户端请求
+/**     初始化socket监听客户端请求        */
 int listenToPort(int port, int *fds, int *count) {
     int j;
 
@@ -1759,7 +1759,7 @@ void resetServerStats(void) {
     server.aof_delayed_fsync = 0;
 }
 
-// 初始化server
+/**         初始化server       */
 void initServer(void) {
     int j;
 
@@ -1789,6 +1789,9 @@ void initServer(void) {
 
     createSharedObjects();
     adjustOpenFilesLimit();
+
+
+    //// 创建事件循环结构体
     server.el = aeCreateEventLoop(server.maxclients+CONFIG_FDSET_INCR);
     if (server.el == NULL) {
         serverLog(LL_WARNING,
@@ -1797,10 +1800,12 @@ void initServer(void) {
         exit(1);
     }
 
-    // 为16个db分配空间
+    //// 为16个db分配空间
     server.db = zmalloc(sizeof(redisDb)*server.dbnum);
 
-    // 初始化socket监听了ipv6 和 ipv4
+
+
+    //// 初始化socket监听了ipv6 和 ipv4
     // server.ipfd_count = 2
     // server.ipfd[0] = x1
     // server.ipfd[1] = x2
@@ -1810,7 +1815,7 @@ void initServer(void) {
 
 
 
-    // 监听本地套接字
+    //// 监听本地套接字
     if (server.unixsocket != NULL) {
         unlink(server.unixsocket); /* don't care if this fails */
         server.sofd = anetUnixServer(server.neterr,server.unixsocket,
@@ -1825,7 +1830,7 @@ void initServer(void) {
 
 
 
-    // 如果没有监听的套接字（ipv6+ipv4+unix），直接返回错误
+    //// 如果没有监听的套接字（ipv6+ipv4+unix），直接返回错误
     if (server.ipfd_count == 0 && server.sofd < 0) {
         serverLog(LL_WARNING, "Configured to not listen anywhere, exiting.");
         exit(1);
@@ -1834,7 +1839,7 @@ void initServer(void) {
 
 
 
-    // 初始化默认16个db
+    //// 初始化默认16个db
     for (j = 0; j < server.dbnum; j++) {
         server.db[j].dict = dictCreate(&dbDictType,NULL);// 创建每个数据库的建空间
         server.db[j].expires = dictCreate(&keyptrDictType,NULL);// 创建每个数据库的过期时间字典
@@ -1884,7 +1889,7 @@ void initServer(void) {
 
     // 关于时间事件，前面我们提到的AOF和RDB持久化以及过期键的处理等操作中，都设计到定时操作
     // 时间事件就是为了这些定时操作而设定的，在特定的时间触发时间事件，并进行相应的处理。
-    // 创建时间事件，用于处理定时任务
+    //// 创建时间事件，用于处理定时任务
     if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         serverPanic("Can't create event loop timers.");
         exit(1);
@@ -1892,7 +1897,7 @@ void initServer(void) {
 
 
 
-    // 为上面创建的服务端套接字关联文件事件，可读事件类型
+    //// 为上面创建的服务端套接字(ipv4,ipv6两个套接字)创建文件事件，可读事件类型
     for (j = 0; j < server.ipfd_count; j++) {
         if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,
             acceptTcpHandler,NULL) == AE_ERR)
@@ -1901,7 +1906,10 @@ void initServer(void) {
                     "Unrecoverable error creating server.ipfd file event.");
             }
     }
-    // 本地套接字关联文件事件
+
+
+
+    //// 本地套接字关联文件事件
     if (server.sofd > 0 && aeCreateFileEvent(server.el,server.sofd,AE_READABLE,
         acceptUnixHandler,NULL) == AE_ERR) serverPanic("Unrecoverable error creating server.sofd file event.");
 

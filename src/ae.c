@@ -27,6 +27,7 @@
     #endif
 #endif
 
+/**     创建事件循环结构体       */
 aeEventLoop *aeCreateEventLoop(int setsize) {
     aeEventLoop *eventLoop;
     int i;
@@ -101,6 +102,9 @@ void aeStop(aeEventLoop *eventLoop) {
 }
 
 /**     创建文件事件      */
+// 关于文件事件，有两个地方需要创建它
+// 1、初始化服务器的时候，需要监听新的客户连接           server.c/initServer
+// 2、在客户连接服务器之后，需要监听该客户的读写事件      etWorking.c/createClient
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData)
 {
