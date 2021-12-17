@@ -12,7 +12,10 @@
 #include "zmalloc.h"
 #include "config.h"
 
-// 包括本系统所支持的最佳多路复用层以下应按性能降序排列
+/**     包括本系统所支持的最佳多路复用层以下应按性能降序排列      */
+// linux下可以使用select和epoll
+// macos下可以使用select和kqueue
+// 如果安装有libevent，则可以使用evport
 #ifdef HAVE_EVPORT
 #include "ae_evport.c"
 #else

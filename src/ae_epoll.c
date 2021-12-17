@@ -5,7 +5,7 @@ typedef struct aeApiState {
     struct epoll_event *events;
 } aeApiState;
 
-// 初始化I/O多路复用库所需的参数
+/**     初始化I/O多路复用库所需的参数        */
 static int aeApiCreate(aeEventLoop *eventLoop) {
     aeApiState *state = zmalloc(sizeof(aeApiState));
 
@@ -32,7 +32,7 @@ static int aeApiResize(aeEventLoop *eventLoop, int setsize) {
     return 0;
 }
 
-// 清空
+/**     清空      */
 static void aeApiFree(aeEventLoop *eventLoop) {
     aeApiState *state = eventLoop->apidata;
 
@@ -41,7 +41,7 @@ static void aeApiFree(aeEventLoop *eventLoop) {
     zfree(state);
 }
 
-// 添加需要监听的事件
+/**     添加需要监听的事件       */
 static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     aeApiState *state = eventLoop->apidata;
     struct epoll_event ee = {0}; /* avoid valgrind warning */
@@ -59,7 +59,7 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     return 0;
 }
 
-// 删除不需要监听的事件
+/**     删除不需要监听的事件      */
 static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int delmask) {
     aeApiState *state = eventLoop->apidata;
     struct epoll_event ee = {0}; /* avoid valgrind warning */
@@ -78,7 +78,7 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int delmask) {
     }
 }
 
-//  取出已准备好的文件描述符
+/**     取出已准备好的文件描述符        */
 static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     aeApiState *state = eventLoop->apidata;
     int retval, numevents = 0;
@@ -104,7 +104,7 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     return numevents;
 }
 
-// 返回当前使用的库的名字
+/**     返回当前使用的库的名字     */
 static char *aeApiName(void) {
     return "epoll";
 }
