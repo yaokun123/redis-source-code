@@ -452,8 +452,8 @@ int hllPatLen(unsigned char *ele, size_t elesize, long *regp) {
     index = hash & HLL_P_MASK;                               // 计算应该放在哪个桶（16384个桶）
 
     // 为了保证循环能够终止
-    hash |= ((uint64_t)1<<63); /* Make sure the loop terminates. */
-    bit = HLL_REGISTERS; /* First bit not used to address the register. */
+    hash |= ((uint64_t)1<<63);
+    bit = HLL_REGISTERS;                                    // 16384
 
     // 存储第一个1出现的位置
     count = 1; /* Initialized to 1 since we count the "00000...1" pattern. */
