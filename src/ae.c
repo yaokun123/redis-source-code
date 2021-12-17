@@ -100,52 +100,55 @@ void aeStop(aeEventLoop *eventLoop) {
     eventLoop->stop = 1;
 }
 
-// 创建文件事件
+/**     创建文件事件      */
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData)
 {
-    if (fd >= eventLoop->setsize) {     // 超出监听的描述符个数，直接返回
+    if (fd >= eventLoop->setsize) {                 // 超出监听的描述符个数，直接返回
         errno = ERANGE;
         return AE_ERR;
     }
-    aeFileEvent *fe = &eventLoop->events[fd];
+    aeFileEvent *fe = &eventLoop->events[fd];       // 注册文件事件使用文件描述符作为数组索引
 
-    if (aeApiAddEvent(eventLoop, fd, mask) == -1)
+    if (aeApiAddEvent(eventLoop, fd, mask) == -1)   // 向系统注册事件
         return AE_ERR;
-    fe->mask |= mask;
-    if (mask & AE_READABLE) fe->rfileProc = proc;
+    fe->mask |= mask;                               // 设置文件事件的事件标记，读or写
+    if (mask & AE_READABLE) fe->rfileProc = proc;   // 设置事件处理函数
     if (mask & AE_WRITABLE) fe->wfileProc = proc;
     fe->clientData = clientData;
     if (fd > eventLoop->maxfd)
-        eventLoop->maxfd = fd;        // 更新监听的最大文件描述符
+        eventLoop->maxfd = fd;                      // 更新监听的最大文件描述符
     return AE_OK;
 }
 
-// 删除文件事件
+/**     删除文件事件      */
 void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
 {
-    if (fd >= eventLoop->setsize) return;
-    aeFileEvent *fe = &eventLoop->events[fd];
-    if (fe->mask == AE_NONE) return;
+    if (fd >= eventLoop->setsize) return;               // 如果传入的文件描述符超过监听的最大文件描述符，就没必要再删除了。直接返回
+    aeFileEvent *fe = &eventLoop->events[fd];           // 根据文件描述符取出文件事件
+    if (fe->mask == AE_NONE) return;                    // 如果文件事件的事件标记为NONE，就没比较删除。直接返回
 
-    aeApiDelEvent(eventLoop, fd, mask);
-    fe->mask = fe->mask & (~mask);
-    if (fd == eventLoop->maxfd && fe->mask == AE_NONE) {// 更新监听的最大文件描述符
-        /* Update the max fd */
+    aeApiDelEvent(eventLoop, fd, mask);                 // 从系统删除事件
+    fe->mask = fe->mask & (~mask);                      // 设置文件事件的事件标记为NONE，标志该事件已经删除
+
+
+    // 如果当前的文件描述符 == 事件循环监听的最大文件描述符。则要更新监听的最大文件描述符
+    if (fd == eventLoop->maxfd && fe->mask == AE_NONE) {
         int j;
 
+        // 遍历监听的文件描述符数组，从后往前的方式，直到找到一个有效的文件描述符(make != NONE)
         for (j = eventLoop->maxfd-1; j >= 0; j--)
             if (eventLoop->events[j].mask != AE_NONE) break;
         eventLoop->maxfd = j;
     }
 }
 
-// 根据文件描述符获取文件事件（读/写/无）
+/**     根据文件描述符获取文件事件（读/写/无）        */
 int aeGetFileEvents(aeEventLoop *eventLoop, int fd) {
-    if (fd >= eventLoop->setsize) return 0;
-    aeFileEvent *fe = &eventLoop->events[fd];
+    if (fd >= eventLoop->setsize) return 0;             // 校验文件描述符有没有超过事件循环监听的最大文件描述符
+    aeFileEvent *fe = &eventLoop->events[fd];           // 根据文件描述符，取出文件事件
 
-    return fe->mask;
+    return fe->mask;                                    // 返回文件事件的事件标记，读、写、NONE
 }
 
 static void aeGetTime(long *seconds, long *milliseconds)
@@ -157,7 +160,7 @@ static void aeGetTime(long *seconds, long *milliseconds)
     *milliseconds = tv.tv_usec/1000;
 }
 
-// 处理时间时间的执行时间（秒/毫秒）
+/**     处理时间事件的执行时间（秒/毫秒）       */
 static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) {
     long cur_sec, cur_ms, when_sec, when_ms;
 
@@ -174,7 +177,7 @@ static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) 
     *ms = when_ms;
 }
 
-// 创建时间事件
+/**     创建时间事件      */
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc)
@@ -183,33 +186,32 @@ long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
     aeTimeEvent *te;
 
     te = zmalloc(sizeof(*te));                      // 分配空间
-    if (te == NULL) return AE_ERR;
-    te->id = id;                                    // 分配唯一标识
+    if (te == NULL) return AE_ERR;                  // 分配失败，直接返回
+    te->id = id;                                    // 分配时间事件的唯一标识id
 
     // when_sec = 1638587231
     // when_ms = 306
-    // 设置时间事件的执行时间，秒/毫秒
-    aeAddMillisecondsToNow(milliseconds,&te->when_sec,&te->when_ms);
+    aeAddMillisecondsToNow(milliseconds,&te->when_sec,&te->when_ms);// 设置时间事件的执行时间，秒/毫秒
 
-    // 设置时间时间的相关属性
-    te->timeProc = proc;
-    te->finalizerProc = finalizerProc;
-    te->clientData = clientData;
+    te->timeProc = proc;                            // 设置时间事件对应的处理函数
+    te->finalizerProc = finalizerProc;              // 时间事件的最后一次处理程序，若已设置，则删除该事件的时候会调用
+    te->clientData = clientData;                    // 数据
 
-    // 头插法维护链表
+    // 头插法维护时间事件单链表
     te->next = eventLoop->timeEventHead;
     eventLoop->timeEventHead = te;
     return id;
 }
 
-// 删除时间事件
+/**     删除时间事件      */
 int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id)
 {
-    aeTimeEvent *te = eventLoop->timeEventHead;
-    // 循环链表
+    aeTimeEvent *te = eventLoop->timeEventHead;     // 取出时间事件单链表的头部地址
+
+    // 循环遍历链表
     while(te) {
-        if (te->id == id) {
-            te->id = AE_DELETED_EVENT_ID;           // 找到之后将id设置为-1
+        if (te->id == id) {                         // 根据事件事件分配的唯一id
+            te->id = AE_DELETED_EVENT_ID;           // 找到之后将id设置为-1，但是并没有从单链表中真正删除
             return AE_OK;
         }
         te = te->next;
@@ -217,13 +219,13 @@ int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id)
     return AE_ERR; /* NO event with the specified ID found */
 }
 
-// 获取最近的时间事件
+/**     获取最近的时间事件       */
 static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
 {
-    aeTimeEvent *te = eventLoop->timeEventHead;
-    aeTimeEvent *nearest = NULL;
+    aeTimeEvent *te = eventLoop->timeEventHead;                     // 取出时间事件单链表的头部地址
+    aeTimeEvent *nearest = NULL;                                    // 存放最近的时间事件
 
-    // 遍历时间事件链表，找出最近要执行的事件
+    // 循环遍历时间事件链表，找出最近要执行的事件
     while(te) {
         if (!nearest || te->when_sec < nearest->when_sec ||
                 (te->when_sec == nearest->when_sec &&
