@@ -3863,11 +3863,9 @@ int main(int argc, char **argv) {
     aeSetAfterSleepProc(server.el,afterSleep);
 
 
-    // 事件循环主函数
+    //// 事件循环主函数
+    // 我们可以看到，基本上事件循环自服务器运行开始，就一直不停的执行，不停地处理各类事件。
     aeMain(server.el);
-
-
-
     aeDeleteEventLoop(server.el);
     return 0;
 }

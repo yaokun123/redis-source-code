@@ -246,39 +246,32 @@ static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
     return nearest;
 }
 
-/* Process time events */
+/**     处理时间事件      */
 static int processTimeEvents(aeEventLoop *eventLoop) {
     int processed = 0;
     aeTimeEvent *te, *prev;
     long long maxId;
-    time_t now = time(NULL);
+    time_t now = time(NULL);                // 获取当前时间
 
-    /* If the system clock is moved to the future, and then set back to the
-     * right value, time events may be delayed in a random way. Often this
-     * means that scheduled operations will not be performed soon enough.
-     *
-     * Here we try to detect system clock skews, and force all the time
-     * events to be processed ASAP when this happens: the idea is that
-     * processing events earlier is less dangerous than delaying them
-     * indefinitely, and practice suggests it is. */
-    if (now < eventLoop->lastTime) {
+
+    if (now < eventLoop->lastTime) {        // 事件循环处理的最后时间与当前时间比较
         te = eventLoop->timeEventHead;
         while(te) {
             te->when_sec = 0;
             te = te->next;
         }
     }
-    eventLoop->lastTime = now;
+    eventLoop->lastTime = now;              // 更新循环处理的最后时间为当前时间
 
     prev = NULL;
-    te = eventLoop->timeEventHead;
+    te = eventLoop->timeEventHead;          // 取出时间事件头指针
     maxId = eventLoop->timeEventNextId-1;
     while(te) {
         long now_sec, now_ms;
         long long id;
 
         /* Remove events scheduled for deletion. */
-        if (te->id == AE_DELETED_EVENT_ID) {
+        if (te->id == AE_DELETED_EVENT_ID) {// 时间事件已经被处理
             aeTimeEvent *next = te->next;
             if (prev == NULL)
                 eventLoop->timeEventHead = te->next;
@@ -291,11 +284,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
             continue;
         }
 
-        /* Make sure we don't process time events created by time events in
-         * this iteration. Note that this check is currently useless: we always
-         * add new timers on the head, however if we change the implementation
-         * detail, this check may be useful again: we keep it here for future
-         * defense. */
+
         if (te->id > maxId) {
             te = te->next;
             continue;
@@ -307,7 +296,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
             int retval;
 
             id = te->id;
-            retval = te->timeProc(eventLoop, id, te->clientData);
+            retval = te->timeProc(eventLoop, id, te->clientData);   // 处理
             processed++;
             if (retval != AE_NOMORE) {
                 aeAddMillisecondsToNow(retval,&te->when_sec,&te->when_ms);
@@ -321,7 +310,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
     return processed;
 }
 
-// 事件处理函数
+/**     事件处理函数      */
 int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 {
     int processed = 0, numevents;
@@ -435,7 +424,7 @@ int aeWait(int fd, int mask, long long milliseconds) {
     }
 }
 
-// 事件循环主函数
+/**     事件循环主函数     */
 void aeMain(aeEventLoop *eventLoop) {
     eventLoop->stop = 0;    // 开启事件循环
     while (!eventLoop->stop) {
