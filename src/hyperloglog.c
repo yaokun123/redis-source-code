@@ -179,12 +179,13 @@
  * configured via the define server.hll_sparse_max_bytes.
  */
 
+/**     每个hyperloglog键由一下结构体组成       */
 struct hllhdr {
-    char magic[4];      /* "HYLL" */
-    uint8_t encoding;   /* HLL_DENSE or HLL_SPARSE. */
-    uint8_t notused[3]; /* Reserved for future use, must be zero. */
-    uint8_t card[8];    /* Cached cardinality, little endian. */
-    uint8_t registers[]; /* Data bytes. */
+    char magic[4];              // 固定值为‘HYLL’，用于标识hyperloglog键
+    uint8_t encoding;           // 编码模式，有密集标识Dence和稀疏模式sparse
+    uint8_t notused[3];         // 未使用字段，留着日后用
+    uint8_t card[8];            // 基数缓存，存储上一次计算的基数
+    uint8_t registers[];        // 桶个数，用来存放数据，Redis中大小为16384
 };
 
 /* The cached cardinality MSB is used to signal validity of the cached value. */
@@ -192,7 +193,7 @@ struct hllhdr {
 #define HLL_VALID_CACHE(hdr) (((hdr)->card[7] & (1<<7)) == 0)
 
 #define HLL_P 14 /* The greater is P, the smaller the error. */
-#define HLL_REGISTERS (1<<HLL_P) /* With P=14, 16384 registers. */
+#define HLL_REGISTERS (1<<HLL_P) /* With P=14, 16384 registers. */ //// 1左移14位
 #define HLL_P_MASK (HLL_REGISTERS-1) /* Mask to index register. */
 #define HLL_BITS 6 /* Enough to count up to 63 leading zeroes. */
 #define HLL_REGISTER_MAX ((1<<HLL_BITS)-1)
@@ -442,29 +443,23 @@ uint64_t MurmurHash64A (const void * key, int len, unsigned int seed) {
     return h;
 }
 
-/* Given a string element to add to the HyperLogLog, returns the length
- * of the pattern 000..1 of the element hash. As a side effect 'regp' is
- * set to the register index this element hashes to. */
+/**     用于计算hash后的值中，第一个出现1的位置      */
 int hllPatLen(unsigned char *ele, size_t elesize, long *regp) {
     uint64_t hash, bit, index;
     int count;
 
-    /* Count the number of zeroes starting from bit HLL_REGISTERS
-     * (that is a power of two corresponding to the first bit we don't use
-     * as index). The max run can be 64-P+1 bits.
-     *
-     * Note that the final "1" ending the sequence of zeroes must be
-     * included in the count, so if we find "001" the count is 3, and
-     * the smallest count possible is no zeroes at all, just a 1 bit
-     * at the first position, that is a count of 1.
-     *
-     * This may sound like inefficient, but actually in the average case
-     * there are high probabilities to find a 1 after a few iterations. */
-    hash = MurmurHash64A(ele,elesize,0xadc83b19ULL);
-    index = hash & HLL_P_MASK; /* Register index. */
+    hash = MurmurHash64A(ele,elesize,0xadc83b19ULL);    // 利用MurmurHash64A哈希函数来计算该元素的hash值
+    index = hash & HLL_P_MASK;                               // 计算应该放在哪个桶（16384个桶）
+
+    // 为了保证循环能够终止
     hash |= ((uint64_t)1<<63); /* Make sure the loop terminates. */
     bit = HLL_REGISTERS; /* First bit not used to address the register. */
+
+    // 存储第一个1出现的位置
     count = 1; /* Initialized to 1 since we count the "00000...1" pattern. */
+
+
+    // 计算count
     while((hash & bit) == 0) {
         count++;
         bit <<= 1;
@@ -474,30 +469,18 @@ int hllPatLen(unsigned char *ele, size_t elesize, long *regp) {
 }
 
 /* ================== Dense representation implementation  ================== */
-
-/* "Add" the element in the dense hyperloglog data structure.
- * Actually nothing is added, but the max 0 pattern counter of the subset
- * the element belongs to is incremented if needed.
- *
- * 'registers' is expected to have room for HLL_REGISTERS plus an
- * additional byte on the right. This requirement is met by sds strings
- * automatically since they are implicitly null terminated.
- *
- * The function always succeed, however if as a result of the operation
- * the approximated cardinality changed, 1 is returned. Otherwise 0
- * is returned. */
+/**     密集模式添加元素        */
 int hllDenseAdd(uint8_t *registers, unsigned char *ele, size_t elesize) {
     uint8_t oldcount, count;
     long index;
 
-    /* Update the register if this element produced a longer run of zeroes. */
-    count = hllPatLen(ele,elesize,&index);
-    HLL_DENSE_GET_REGISTER(oldcount,registers,index);
+    count = hllPatLen(ele,elesize,&index);                  // 计算该元素第一个1出现的位置
+    HLL_DENSE_GET_REGISTER(oldcount,registers,index);       // 得到第index个桶内的count值
     if (count > oldcount) {
-        HLL_DENSE_SET_REGISTER(registers,index,count);
+        HLL_DENSE_SET_REGISTER(registers,index,count);      // 如果比现有的最大值还大，则添加该值到数据部分
         return 1;
     } else {
-        return 0;
+        return 0;                                           // 如果小于现有的最大值，则不做处理，因为不影响基数
     }
 }
 
@@ -1017,12 +1000,13 @@ uint64_t hllCount(struct hllhdr *hdr, int *invalid) {
 }
 
 /* Call hllDenseAdd() or hllSparseAdd() according to the HLL encoding. */
+/**     添加元素        */
 int hllAdd(robj *o, unsigned char *ele, size_t elesize) {
     struct hllhdr *hdr = o->ptr;
     switch(hdr->encoding) {
-    case HLL_DENSE: return hllDenseAdd(hdr->registers,ele,elesize);
-    case HLL_SPARSE: return hllSparseAdd(o,ele,elesize);
-    default: return -1; /* Invalid representation. */
+    case HLL_DENSE: return hllDenseAdd(hdr->registers,ele,elesize);     // 密集模式添加元素
+    case HLL_SPARSE: return hllSparseAdd(o,ele,elesize);                // 稀疏模式添加元素
+    default: return -1; /* Invalid representation. */                   // 非法模式
     }
 }
 
@@ -1079,6 +1063,7 @@ int hllMerge(uint8_t *max, robj *hll) {
 
 /* Create an HLL object. We always create the HLL using sparse encoding.
  * This will be upgraded to the dense representation as needed. */
+/**     创建一个hypeloglog      */
 robj *createHLLObject(void) {
     robj *o;
     struct hllhdr *hdr;
@@ -1092,7 +1077,7 @@ robj *createHLLObject(void) {
     /* Populate the sparse representation with as many XZERO opcodes as
      * needed to represent all the registers. */
     aux = HLL_REGISTERS;
-    s = sdsnewlen(NULL,sparselen);
+    s = sdsnewlen(NULL,sparselen);          // 创建一个字符串（不带头信息）
     p = (uint8_t*)s + HLL_HDR_SIZE;
     while(aux) {
         int xzero = HLL_SPARSE_XZERO_MAX_LEN;
@@ -1107,29 +1092,30 @@ robj *createHLLObject(void) {
     o = createObject(OBJ_STRING,s);
     hdr = o->ptr;
     memcpy(hdr->magic,"HYLL",4);
-    hdr->encoding = HLL_SPARSE;
+    hdr->encoding = HLL_SPARSE;                 // 刚创建出来的hyperloglog默认采用稀疏模式添加元素
     return o;
 }
 
 /* Check if the object is a String with a valid HLL representation.
  * Return C_OK if this is true, otherwise reply to the client
  * with an error and return C_ERR. */
+/**     判断是否是hyperloglog对象      */
 int isHLLObjectOrReply(client *c, robj *o) {
     struct hllhdr *hdr;
 
     /* Key exists, check type */
-    if (checkType(c,o,OBJ_STRING))
+    if (checkType(c,o,OBJ_STRING))                                      // 检查一下类型要是string
         return C_ERR; /* Error already sent. */
 
-    if (!sdsEncodedObject(o)) goto invalid;
+    if (!sdsEncodedObject(o)) goto invalid;                             // o->encoding要是raw或embstr
     if (stringObjectLen(o) < sizeof(*hdr)) goto invalid;
     hdr = o->ptr;
 
-    /* Magic should be "HYLL". */
+    // 判断前4个字节必须要为"HYLL"，标识是一个hyperloglog
     if (hdr->magic[0] != 'H' || hdr->magic[1] != 'Y' ||
         hdr->magic[2] != 'L' || hdr->magic[3] != 'L') goto invalid;
 
-    if (hdr->encoding > HLL_MAX_ENCODING) goto invalid;
+    if (hdr->encoding > HLL_MAX_ENCODING) goto invalid;                 // huperloglog的encoding编码模式，有密集标识HLL_Dence-0和稀疏模式HLL_SPARSE-1
 
     /* Dense representation string length should match exactly. */
     if (hdr->encoding == HLL_DENSE &&
@@ -1146,23 +1132,26 @@ invalid:
 }
 
 /* PFADD var ele ele ele ... ele => :0 or :1 */
+/**     添加元素        */
 void pfaddCommand(client *c) {
-    robj *o = lookupKeyWrite(c->db,c->argv[1]);
+    robj *o = lookupKeyWrite(c->db,c->argv[1]);     // 根据键值在数据库中查找
     struct hllhdr *hdr;
     int updated = 0, j;
 
-    if (o == NULL) {
+    if (o == NULL) {                                    // 没有找到
         /* Create the key with a string value of the exact length to
          * hold our HLL data structure. sdsnewlen() when NULL is passed
          * is guaranteed to return bytes initialized to zero. */
-        o = createHLLObject();
-        dbAdd(c->db,c->argv[1],o);
+        o = createHLLObject();                          // 创建一个hyperloglog键对象（其实就是字符串对象）
+        dbAdd(c->db,c->argv[1],o);                  // 将键和对象添加到数据库中
         updated++;
     } else {
-        if (isHLLObjectOrReply(c,o) != C_OK) return;
+        if (isHLLObjectOrReply(c,o) != C_OK) return;    // 判断是否是一个hyperloglog键，判断前四个字节是否为'HYLL'
         o = dbUnshareStringValue(c->db,c->argv[1],o);
     }
-    /* Perform the low level ADD operation for every element. */
+
+
+    // 调用hllAdd函数来添加元素
     for (j = 2; j < c->argc; j++) {
         int retval = hllAdd(o, (unsigned char*)c->argv[j]->ptr,
                                sdslen(c->argv[j]->ptr));
@@ -1182,6 +1171,9 @@ void pfaddCommand(client *c) {
         server.dirty++;
         HLL_INVALIDATE_CACHE(hdr);
     }
+
+
+    // 客户端交互部分
     addReply(c, updated ? shared.cone : shared.czero);
 }
 
