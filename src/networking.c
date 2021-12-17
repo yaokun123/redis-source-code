@@ -67,7 +67,7 @@ int listMatchObjects(void *a, void *b) {
     return equalStringObjects(a,b);
 }
 
-// 根据cfd客户端连接套接字，创建一个client结构体
+/**     根据cfd客户端连接套接字，创建一个client结构体     */
 client *createClient(int fd) {
     client *c = zmalloc(sizeof(client));        // 分配空间
 
@@ -80,7 +80,7 @@ client *createClient(int fd) {
         if (server.tcpkeepalive)
             anetKeepAlive(NULL,fd,server.tcpkeepalive);
 
-        // 将客户端连接套接字，加入到文件事件里aeEventLoop.events
+        //// 将客户端连接套接字，加入到事件循环中的 文件事件   （可读）
         if (aeCreateFileEvent(server.el,fd,AE_READABLE,
             readQueryFromClient, c) == AE_ERR)
         {
