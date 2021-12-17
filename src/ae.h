@@ -30,7 +30,7 @@ typedef int aeTimeProc(struct aeEventLoop *eventLoop, long long id, void *client
 typedef void aeEventFinalizerProc(struct aeEventLoop *eventLoop, void *clientData);
 typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 
-// 文件事件结构体
+/**     文件事件结构体     */
 typedef struct aeFileEvent {
     int mask;                   // 事件标记，读or写
     aeFileProc *rfileProc;      // 读事件处理函数
@@ -38,7 +38,7 @@ typedef struct aeFileEvent {
     void *clientData;           // client
 } aeFileEvent;
 
-// 时间事件结构体
+/**     时间事件结构体     */
 typedef struct aeTimeEvent {
     long long id;               // 时间事件标识符，用于唯一标记该时间事件
     long when_sec;              // 时间事件触发时间 秒
@@ -49,7 +49,7 @@ typedef struct aeTimeEvent {
     struct aeTimeEvent *next;   // 下一个时间事件
 } aeTimeEvent;
 
-// 触发时间结构体
+/**     触发时间结构体     */
 typedef struct aeFiredEvent {
     int fd;                     // 文件事件描述符
     int mask;                   // 读写标记
@@ -57,6 +57,8 @@ typedef struct aeFiredEvent {
 
 // 每次调用I/O复用程序之后，会返回已经准备好的文件事件描述符，这时候就会以该结构体的形式存放下来
 // Redis在事件循环的时候，会对这些已准备好待处理的事件一一进行处理，也就是上面说的待处理事件池
+// 事件循坏结构中，存放着所有 文件事件 和 时间事件，以及已 准备好的事件
+/**     事件循环结构体     */
 typedef struct aeEventLoop {
     int maxfd;                  // 当前注册的最大描述符
     int setsize;                // 需要监听的描述符个数
