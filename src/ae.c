@@ -182,6 +182,9 @@ static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) 
 }
 
 /**     创建时间事件      */
+// 关于时间事件，Redis在初始化服务器的时候就会创建，前面我们提到的AOF和RDB持久化以及过期键的处理等操作中，都涉及到定时操作，
+// 时间事件就是为了这些定时操作而设定的，在特定的时间触发时间事件，并进行相应的处理。
+// server.c/initServer  ->  serverCron操作函数
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc)
