@@ -72,11 +72,14 @@ void queueMultiCommand(client *c) {
     c->mstate.count++;                                  // 命令个数加1
 }
 
+/**     取消事务的底层实现        */
 void discardTransaction(client *c) {
-    freeClientMultiState(c);
-    initClientMultiState(c);
+    freeClientMultiState(c);        // 释放事务队列
+    initClientMultiState(c);        // 初始化事务队列
+
+    // 取消所有有关事务的标记
     c->flags &= ~(CLIENT_MULTI|CLIENT_DIRTY_CAS|CLIENT_DIRTY_EXEC);
-    unwatchAllKeys(c);
+    unwatchAllKeys(c);              // 取消所有被监视的键
 }
 
 /* Flag the transacation as DIRTY_EXEC so that EXEC will fail.
@@ -96,12 +99,14 @@ void multiCommand(client *c) {
     addReply(c,shared.ok);              // 回复客户端
 }
 
+/**     取消事务        */
 void discardCommand(client *c) {
+    // 如果当前不处在事务状态，则报错
     if (!(c->flags & CLIENT_MULTI)) {
         addReplyError(c,"DISCARD without MULTI");
         return;
     }
-    discardTransaction(c);
+    discardTransaction(c);      // 取消事务
     addReply(c,shared.ok);
 }
 
@@ -115,64 +120,70 @@ void execCommandPropagateMulti(client *c) {
     decrRefCount(multistring);
 }
 
+/**     事务执行        */
 void execCommand(client *c) {
     int j;
     robj **orig_argv;
     int orig_argc;
     struct redisCommand *orig_cmd;
-    int must_propagate = 0; /* Need to propagate MULTI/EXEC to AOF / slaves? */
+    int must_propagate = 0;         // 是否需要将MULTI/EXEC命令传播给slave节点或AOF
     int was_master = server.masterhost == NULL;
 
+    // 如果客户端不处于事务状态，直接报错
     if (!(c->flags & CLIENT_MULTI)) {
         addReplyError(c,"EXEC without MULTI");
         return;
     }
 
-    /* Check if we need to abort the EXEC because:
-     * 1) Some WATCHed key was touched.
-     * 2) There was a previous error while queueing commands.
-     * A failed EXEC in the first case returns a multi bulk nil object
-     * (technically it is not an error but a special behavior), while
-     * in the second an EXECABORT error is returned. */
+    // 检查是否需要终止EXEC操作，因为：
+    // (1) 有被监控的键被修改
+    // (2) 命令入队时发生错误
+    // 第一种情况会返回多个nil空对象，准确地说这不是一个错误而是一种特殊行为
+    // 第二种情况会返回一个EXECABORT错误
     if (c->flags & (CLIENT_DIRTY_CAS|CLIENT_DIRTY_EXEC)) {
         addReply(c, c->flags & CLIENT_DIRTY_EXEC ? shared.execaborterr :
                                                   shared.nullmultibulk);
+        // 取消事务，Redis不支持事务回滚
         discardTransaction(c);
         goto handle_monitor;
     }
 
     /* Exec all the queued commands */
-    unwatchAllKeys(c); /* Unwatch ASAP otherwise we'll waste CPU cycles */
+    unwatchAllKeys(c);                              // 取消所有对键的监控
+
+    // 先备份一次命令队列中的命令
     orig_argv = c->argv;
     orig_argc = c->argc;
     orig_cmd = c->cmd;
     addReplyMultiBulkLen(c,c->mstate.count);
+
+    // 遍历事务中的命令，一一交给客户端处理
     for (j = 0; j < c->mstate.count; j++) {
         c->argc = c->mstate.commands[j].argc;
         c->argv = c->mstate.commands[j].argv;
         c->cmd = c->mstate.commands[j].cmd;
 
-        /* Propagate a MULTI request once we encounter the first command which
-         * is not readonly nor an administrative one.
-         * This way we'll deliver the MULTI/..../EXEC block as a whole and
-         * both the AOF and the replication link will have the same consistency
-         * and atomicity guarantees. */
+        // 当我们第一次遇到写命令的时候，传播MULTI命令
+        // 这里我们MULTI/.../EXEC当做一个整体传输，保证服务器和AOF以及附属节点的一致性
         if (!must_propagate && !(c->cmd->flags & (CMD_READONLY|CMD_ADMIN))) {
             execCommandPropagateMulti(c);
             must_propagate = 1;
         }
 
+        // 执行命令
         call(c,CMD_CALL_FULL);
 
-        /* Commands may alter argc/argv, restore mstate. */
+        // 命令执行后可能会被修改，需要更新操作
         c->mstate.commands[j].argc = c->argc;
         c->mstate.commands[j].argv = c->argv;
         c->mstate.commands[j].cmd = c->cmd;
     }
+
+    // 回复原命令
     c->argv = orig_argv;
     c->argc = orig_argc;
     c->cmd = orig_cmd;
-    discardTransaction(c);
+    discardTransaction(c);      // 消除事务状态
 
     /* Make sure the EXEC command will be propagated as well if MULTI
      * was already propagated. */
