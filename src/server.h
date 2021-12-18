@@ -576,6 +576,12 @@ typedef struct redisObject {
 
 struct evictionPoolEntry; /* Defined in evict.c */
 
+/* redisDB数据库结构体
+ * | key1 | —— | client1 | -> | client2 |-> | client3 |
+ * | key2 | —— | client4 |
+ * | key3 | —— | client5 | -> | client6 |
+ * 该字典结构的键为被监视的键，值为链表，保存监视该键的所有客户端
+ */
 /**      数据库的结构     */
 typedef struct redisDb {
     dict *dict;                 // 数据库的键空间
