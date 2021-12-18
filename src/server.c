@@ -2217,7 +2217,7 @@ void call(client *c, int flags) {
     server.stat_numcommands++;
 }
 
-// 执行命令
+/**      执行命令       */
 int processCommand(client *c) {
     // c->argv[0]->ptr就是命令例如set/get/lpush等。。。
     if (!strcasecmp(c->argv[0]->ptr,"quit")) {  // 如果是退出命令
@@ -2394,6 +2394,9 @@ int processCommand(client *c) {
         c->cmd->proc != execCommand && c->cmd->proc != discardCommand &&
         c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)
     {
+        // 检查此时是否开启的事务，检查当前执行的命令不是EXEC、DISCARD、MULTI和WATCH
+        
+        // 执行命令入队
         queueMultiCommand(c);
         addReply(c,shared.queued);
     } else {

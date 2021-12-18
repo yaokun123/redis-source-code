@@ -1,32 +1,3 @@
-/*
- * Copyright (c) 2009-2012, Salvatore Sanfilippo <antirez at gmail dot com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *   * Redistributions of source code must retain the above copyright notice,
- *     this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *   * Neither the name of Redis nor the names of its contributors may be used
- *     to endorse or promote products derived from this software without
- *     specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 #ifndef __REDIS_H
 #define __REDIS_H
 
@@ -579,6 +550,7 @@ typedef struct RedisModuleDigest {
 #define LRU_CLOCK_RESOLUTION 1000 /* LRU clock resolution in ms */
 
 #define OBJ_SHARED_REFCOUNT INT_MAX
+/**     redis对象     */
 typedef struct redisObject {
     unsigned type:4;                        // Redis的对象有五种类型，分别是string、hash、list、set和zset，
                                             // type属性就是用来标识着五种数据类型。type占用4个bit位
@@ -604,7 +576,7 @@ typedef struct redisObject {
 
 struct evictionPoolEntry; /* Defined in evict.c */
 
-// 数据库的结构
+/**      数据库的结构     */
 typedef struct redisDb {
     dict *dict;                 // 数据库的键空间
     dict *expires;              // 过期时间
@@ -615,18 +587,19 @@ typedef struct redisDb {
     long long avg_ttl;          // 数据库的平均生存时间
 } redisDb;
 
-/* Client MULTI/EXEC state */
+/**     命令队列        */
 typedef struct multiCmd {
-    robj **argv;
-    int argc;
-    struct redisCommand *cmd;
+    robj **argv;                // 参数
+    int argc;                   // 参数个数
+    struct redisCommand *cmd;   // 命令指针
 } multiCmd;
 
+/**     事务状态        */
 typedef struct multiState {
-    multiCmd *commands;     /* Array of MULTI commands */
-    int count;              /* Total number of MULTI commands */
-    int minreplicas;        /* MINREPLICAS for synchronous replication */
-    time_t minreplicas_timeout; /* MINREPLICAS timeout as unixtime. */
+    multiCmd *commands;         // 事务队列，存放命令，FIFO结构
+    int count;                  // 事务中所有命令的个数
+    int minreplicas;            // 用于同步复制
+    time_t minreplicas_timeout; // 超时时间
 } multiState;
 
 /* This structure holds the blocking operation state for a client.
@@ -712,7 +685,7 @@ typedef struct client {
     int slave_listening_port; /* As configured with: SLAVECONF listening-port */
     char slave_ip[NET_IP_STR_LEN]; /* Optionally given by REPLCONF ip-address */
     int slave_capa;         /* Slave capabilities: SLAVE_CAPA_* bitwise OR. */
-    multiState mstate;      /* MULTI/EXEC state */
+    multiState mstate;      //// 开启事务，存放命令的地方
     int btype;              /* Type of blocking op if CLIENT_BLOCKED. */
     blockingState bpop;     /* blocking state */
     long long woff;         /* Last write global replication offset. */

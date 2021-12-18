@@ -52,21 +52,24 @@ void freeClientMultiState(client *c) {
     zfree(c->mstate.commands);
 }
 
-/* Add a new command into the MULTI commands queue */
+/**     添加命令到事务队列       */
 void queueMultiCommand(client *c) {
     multiCmd *mc;
     int j;
 
+    // 重新申请内存
     c->mstate.commands = zrealloc(c->mstate.commands,
             sizeof(multiCmd)*(c->mstate.count+1));
+
+    // 找到新命令存放的位置
     mc = c->mstate.commands+c->mstate.count;
-    mc->cmd = c->cmd;
-    mc->argc = c->argc;
-    mc->argv = zmalloc(sizeof(robj*)*c->argc);
-    memcpy(mc->argv,c->argv,sizeof(robj*)*c->argc);
+    mc->cmd = c->cmd;                                   // 存放命令
+    mc->argc = c->argc;                                 // 存放参数个数
+    mc->argv = zmalloc(sizeof(robj*)*c->argc);     // 存放参数
+    memcpy(mc->argv,c->argv,sizeof(robj*)*c->argc);     // 拷贝参数
     for (j = 0; j < c->argc; j++)
-        incrRefCount(mc->argv[j]);
-    c->mstate.count++;
+        incrRefCount(mc->argv[j]);                      // 引用计数加1
+    c->mstate.count++;                                  // 命令个数加1
 }
 
 void discardTransaction(client *c) {
@@ -83,13 +86,14 @@ void flagTransaction(client *c) {
         c->flags |= CLIENT_DIRTY_EXEC;
 }
 
+/**     multi命令     */
 void multiCommand(client *c) {
-    if (c->flags & CLIENT_MULTI) {
+    if (c->flags & CLIENT_MULTI) {      // 检查是否开启了事务
         addReplyError(c,"MULTI calls can not be nested");
         return;
     }
-    c->flags |= CLIENT_MULTI;
-    addReply(c,shared.ok);
+    c->flags |= CLIENT_MULTI;           // 标记事务已经开启
+    addReply(c,shared.ok);              // 回复客户端
 }
 
 void discardCommand(client *c) {
