@@ -1,32 +1,3 @@
-/*
- * Copyright (c) 2009-2016, Salvatore Sanfilippo <antirez at gmail dot com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *   * Redistributions of source code must retain the above copyright notice,
- *     this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *   * Neither the name of Redis nor the names of its contributors may be used
- *     to endorse or promote products derived from this software without
- *     specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include "server.h"
 #include "cluster.h"
 #include "slowlog.h"
@@ -72,58 +43,6 @@ double R_Zero, R_PosInf, R_NegInf, R_Nan;
 struct redisServer server; /* Server global state */
 volatile unsigned long lru_clock; /* Server global current LRU time. */
 
-/* Our command table.
- *
- * Every entry is composed of the following fields:
- *
- * name: a string representing the command name.
- * function: pointer to the C function implementing the command.
- * arity: number of arguments, it is possible to use -N to say >= N
- * sflags: command flags as string. See below for a table of flags.
- * flags: flags as bitmask. Computed by Redis using the 'sflags' field.
- * get_keys_proc: an optional function to get key arguments from a command.
- *                This is only used when the following three fields are not
- *                enough to specify what arguments are keys.
- * first_key_index: first argument that is a key
- * last_key_index: last argument that is a key
- * key_step: step to get all the keys from first to last argument. For instance
- *           in MSET the step is two since arguments are key,val,key,val,...
- * microseconds: microseconds of total execution time for this command.
- * calls: total number of calls of this command.
- *
- * The flags, microseconds and calls fields are computed by Redis and should
- * always be set to zero.
- *
- * Command flags are expressed using strings where every character represents
- * a flag. Later the populateCommandTable() function will take care of
- * populating the real 'flags' field using this characters.
- *
- * This is the meaning of the flags:
- *
- * w: write command (may modify the key space).
- * r: read command  (will never modify the key space).
- * m: may increase memory usage once called. Don't allow if out of memory.
- * a: admin command, like SAVE or SHUTDOWN.
- * p: Pub/Sub related command.
- * f: force replication of this command, regardless of server.dirty.
- * s: command not allowed in scripts.
- * R: random command. Command is not deterministic, that is, the same command
- *    with the same arguments, with the same key space, may have different
- *    results. For instance SPOP and RANDOMKEY are two random commands.
- * S: Sort command output array if called from script, so that the output
- *    is deterministic.
- * l: Allow command while loading the database.
- * t: Allow command while a slave has stale data but is not allowed to
- *    server this data. Normally no command is accepted in this condition
- *    but just a few.
- * M: Do not automatically propagate the command on MONITOR.
- * k: Perform an implicit ASKING for this command, so the command will be
- *    accepted in cluster mode if the slot is marked as 'importing'.
- * F: Fast command: O(1) or O(log(N)) command that should never delay
- *    its execution as long as the kernel scheduler is giving us time.
- *    Note that commands that may trigger a DEL as a side effect (like SET)
- *    are not fast commands.
- */
 struct redisCommand redisCommandTable[] = {
     {"module",moduleCommand,-2,"as",0,NULL,1,1,1,0,0},
     {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
