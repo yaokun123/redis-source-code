@@ -869,14 +869,7 @@ int rdbSaveInfoAuxFields(rio *rdb, int flags, rdbSaveInfo *rsi) {
     return 1;
 }
 
-/* Produces a dump of the database in RDB format sending it to the specified
- * Redis I/O channel. On success C_OK is returned, otherwise C_ERR
- * is returned and part of the output, or all the output, can be
- * missing because of I/O errors.
- *
- * When the function returns C_ERR and if 'error' is not NULL, the
- * integer pointed by 'error' is set to the value of errno just after the I/O
- * error. */
+/**     利用RIO进行写数据操     */
 int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
     dictIterator *di = NULL;
     dictEntry *de;
@@ -886,12 +879,18 @@ int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
     uint64_t cksum;
     size_t processed = 0;
 
+    // 设置校验和
     if (server.rdb_checksum)
         rdb->update_cksum = rioGenericUpdateChecksum;
+
+    // 写入REDIS文件标识和版本号
     snprintf(magic,sizeof(magic),"REDIS%04d",RDB_VERSION);
     if (rdbWriteRaw(rdb,magic,9) == -1) goto werr;
+
+    // 写入此时系统相关信息
     if (rdbSaveInfoAuxFields(rdb,flags,rsi) == -1) goto werr;
 
+    // 遍历所有数据库
     for (j = 0; j < server.dbnum; j++) {
         redisDb *db = server.db+j;
         dict *d = db->dict;
@@ -899,14 +898,14 @@ int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
         di = dictGetSafeIterator(d);
         if (!di) return C_ERR;
 
-        /* Write the SELECT DB opcode */
+        // 写入当前数据类型
         if (rdbSaveType(rdb,RDB_OPCODE_SELECTDB) == -1) goto werr;
+        // 写入数据库编号
         if (rdbSaveLen(rdb,j) == -1) goto werr;
 
-        /* Write the RESIZE DB opcode. We trim the size to UINT32_MAX, which
-         * is currently the largest type we are able to represent in RDB sizes.
-         * However this does not limit the actual size of the DB to load since
-         * these sizes are just hints to resize the hash tables. */
+        // 获取数据库字典的大小和过期键字典的大小
+        // 为了编码方便这些大小最大为UINT32_MAX，但是并不影响数据库和过期键的实际大小
+        // 因为此大小只是在加载rdb数据的时候申请哈希表的初始大小
         uint32_t db_size, expires_size;
         db_size = (dictSize(db->dict) <= UINT32_MAX) ?
                                 dictSize(db->dict) :
@@ -914,11 +913,17 @@ int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
         expires_size = (dictSize(db->expires) <= UINT32_MAX) ?
                                 dictSize(db->expires) :
                                 UINT32_MAX;
+
+        // 写入当前待写入数据的类型，此处为RDB_OPCODE_RESIZEDB
         if (rdbSaveType(rdb,RDB_OPCODE_RESIZEDB) == -1) goto werr;
+
+        // 写入数据库大小
         if (rdbSaveLen(rdb,db_size) == -1) goto werr;
+
+        // 写入过期键的个数
         if (rdbSaveLen(rdb,expires_size) == -1) goto werr;
 
-        /* Iterate this DB writing every entry */
+        // 迭代当前数据库中的每一个节点，并将键值对写入rdb文件
         while((de = dictNext(di)) != NULL) {
             sds keystr = dictGetKey(de);
             robj key, *o = dictGetVal(de);
@@ -926,6 +931,7 @@ int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
 
             initStaticStringObject(key,keystr);
             expire = getExpire(db,&key);
+            // 写入键值对数据
             if (rdbSaveKeyValuePair(rdb,&key,o,expire,now) == -1) goto werr;
 
             /* When this RDB is produced as part of an AOF rewrite, move
@@ -938,21 +944,21 @@ int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
                 aofReadDiffFromParent();
             }
         }
-        dictReleaseIterator(di);
+        dictReleaseIterator(di);        // 释放迭代器
     }
-    di = NULL; /* So that we don't release it again on error. */
+    di = NULL; // 不释放，留下一次迭代用
 
-    /* EOF opcode */
+    // 写入结束符
     if (rdbSaveType(rdb,RDB_OPCODE_EOF) == -1) goto werr;
 
-    /* CRC64 checksum. It will be zero if checksum computation is disabled, the
-     * loading code skips the check in this case. */
+    // 写入CRC64校验和
     cksum = rdb->cksum;
     memrev64ifbe(&cksum);
     if (rioWrite(rdb,&cksum,8) == 0) goto werr;
     return C_OK;
 
 werr:
+    // 出错的处理代码
     if (error) *error = errno;
     if (di) dictReleaseIterator(di);
     return C_ERR;
@@ -984,17 +990,17 @@ werr: /* Write error. */
     return C_ERR;
 }
 
-/* Save the DB on disk. Return C_ERR on error, C_OK on success. */
+/**      在磁盘上保存rdb文件，如果出错返回C_ERR，反之C_O   */
 int rdbSave(char *filename, rdbSaveInfo *rsi) {
     char tmpfile[256];
-    char cwd[MAXPATHLEN]; /* Current working dir path for error messages. */
+    char cwd[MAXPATHLEN];                                       // 当前工作目录
     FILE *fp;
     rio rdb;
     int error = 0;
 
-    snprintf(tmpfile,256,"temp-%d.rdb", (int) getpid());
-    fp = fopen(tmpfile,"w");
-    if (!fp) {
+    snprintf(tmpfile,256,"temp-%d.rdb", (int) getpid());        // 创建临时文件
+    fp = fopen(tmpfile,"w");                              // 打开临时文件，获取描述符
+    if (!fp) {                                                  // 打开文件失败
         char *cwdp = getcwd(cwd,MAXPATHLEN);
         serverLog(LL_WARNING,
             "Failed opening the RDB file %s (in server root dir %s) "
@@ -1005,19 +1011,18 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
         return C_ERR;
     }
 
-    rioInitWithFile(&rdb,fp);
-    if (rdbSaveRio(&rdb,&error,RDB_SAVE_NONE,rsi) == C_ERR) {
+    rioInitWithFile(&rdb,fp);                                   // 初始化I/0，便于后续写入文件
+    if (rdbSaveRio(&rdb,&error,RDB_SAVE_NONE,rsi) == C_ERR) {   // 利用RIO来执行写入操作
         errno = error;
         goto werr;
     }
 
-    /* Make sure data will not remain on the OS's output buffers */
+    // 确保输出缓存中没有数据
     if (fflush(fp) == EOF) goto werr;
     if (fsync(fileno(fp)) == -1) goto werr;
     if (fclose(fp) == EOF) goto werr;
 
-    /* Use RENAME to make sure the DB file is changed atomically only
-     * if the generate DB file is ok. */
+    // 使用RENAME，原子性的对临时文件进行改名，覆盖原来的RDB文件
     if (rename(tmpfile,filename) == -1) {
         char *cwdp = getcwd(cwd,MAXPATHLEN);
         serverLog(LL_WARNING,
@@ -1031,19 +1036,20 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
         return C_ERR;
     }
 
-    serverLog(LL_NOTICE,"DB saved on disk");
-    server.dirty = 0;
-    server.lastsave = time(NULL);
-    server.lastbgsave_status = C_OK;
+    serverLog(LL_NOTICE,"DB saved on disk");                // 写入完成，打印日志
+    server.dirty = 0;                                           // 清零脏数据
+    server.lastsave = time(NULL);                               // 记录最后一次完成SAVE的时间
+    server.lastbgsave_status = C_OK;                            // 记录最后一次执行SAVE的状态
     return C_OK;
 
 werr:
     serverLog(LL_WARNING,"Write error saving DB on disk: %s", strerror(errno));
-    fclose(fp);
-    unlink(tmpfile);
+    fclose(fp);                                                 // 关闭文件
+    unlink(tmpfile);                                            // 删除文件
     return C_ERR;
 }
 
+/**     rdb后台   */
 int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
     pid_t childpid;
     long long start;
@@ -1971,12 +1977,15 @@ int rdbSaveToSlavesSockets(rdbSaveInfo *rsi) {
 }
 
 
-// SAVE命令的底层实现代码
+/**     SAVE命令的底层实现代码       */
 void saveCommand(client *c) {
+    // 检查BGSAVE命令是否正在执行(BGSAVE是开一个进程来指定存储命令)
     if (server.rdb_child_pid != -1) {
         addReplyError(c,"Background save already in progress");
         return;
     }
+
+    // 开始执行rdb持久化操作
     if (rdbSave(server.rdb_filename,NULL) == C_OK) {
         addReply(c,shared.ok);
     } else {
@@ -1984,7 +1993,7 @@ void saveCommand(client *c) {
     }
 }
 
-/* BGSAVE [SCHEDULE] */
+/** BGSAVE 命令的底层实现代码  */
 void bgsaveCommand(client *c) {
     int schedule = 0;
 
@@ -2000,8 +2009,10 @@ void bgsaveCommand(client *c) {
     }
 
     if (server.rdb_child_pid != -1) {
+        // BGSAVE命令正在执行
         addReplyError(c,"Background save already in progress");
     } else if (server.aof_child_pid != -1) {
+        // aof正在重写
         if (schedule) {
             server.rdb_bgsave_scheduled = 1;
             addReplyStatus(c,"Background saving scheduled");
