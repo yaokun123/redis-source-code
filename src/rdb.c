@@ -1049,24 +1049,30 @@ werr:
     return C_ERR;
 }
 
-/**     rdb后台   */
+/**     真正执行BGSAVE的代码   */
 int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
     pid_t childpid;
     long long start;
 
+    // 检查后台是否在执行AOF重写或RDB(BGSAVE)持久化操作
     if (server.aof_child_pid != -1 || server.rdb_child_pid != -1) return C_ERR;
 
+    // 取出脏数据
     server.dirty_before_bgsave = server.dirty;
     server.lastbgsave_try = time(NULL);
     openChildInfoPipe();
 
     start = ustime();
+
+    // fork出一个子进程
     if ((childpid = fork()) == 0) {
         int retval;
 
-        /* Child */
+        // 子进程执行存储操作
         closeListeningSockets(0);
         redisSetProcTitle("redis-rdb-bgsave");
+
+        // 进程中执行rdbsave函数
         retval = rdbSave(filename,rsi);
         if (retval == C_OK) {
             size_t private_dirty = zmalloc_get_private_dirty(-1);
@@ -1082,10 +1088,12 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
         }
         exitFromChild((retval == C_OK) ? 0 : 1);
     } else {
-        /* Parent */
+        // 父进程执行操作
         server.stat_fork_time = ustime()-start;
         server.stat_fork_rate = (double) zmalloc_used_memory() * 1000000 / server.stat_fork_time / (1024*1024*1024); /* GB per second. */
         latencyAddSampleIfNeeded("fork",server.stat_fork_time/1000);
+
+        // 创建子进程失败
         if (childpid == -1) {
             closeChildInfoPipe();
             server.lastbgsave_status = C_ERR;
@@ -1093,8 +1101,12 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
                 strerror(errno));
             return C_ERR;
         }
+
+        // 通知客户端进程号
         serverLog(LL_NOTICE,"Background saving started by pid %d",childpid);
+        // 保存rdb持久化开始时间
         server.rdb_save_time_start = time(NULL);
+        // 保存子进程号
         server.rdb_child_pid = childpid;
         server.rdb_child_type = RDB_CHILD_TYPE_DISK;
         updateDictResizePolicy();
@@ -1997,8 +2009,9 @@ void saveCommand(client *c) {
 void bgsaveCommand(client *c) {
     int schedule = 0;
 
-    /* The SCHEDULE option changes the behavior of BGSAVE when an AOF rewrite
-     * is in progress. Instead of returning an error a BGSAVE gets scheduled. */
+    // schedule参数是为了避免服务器在执行AOF持久化的时候影响RDB持久化
+    // 于是向系统添加一个日程计划，使得服务器在定期事件中检查该参数和AOF持久化结束没
+    // 然后执行BGSAVE命令
     if (c->argc > 1) {
         if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr,"schedule")) {
             schedule = 1;
@@ -2008,11 +2021,11 @@ void bgsaveCommand(client *c) {
         }
     }
 
+    // 后台正在运行BGSAVE，直接退出
     if (server.rdb_child_pid != -1) {
-        // BGSAVE命令正在执行
         addReplyError(c,"Background save already in progress");
     } else if (server.aof_child_pid != -1) {
-        // aof正在重写
+        // AOF正在后台执行，增加schedule，提醒客户端增加schedule参数
         if (schedule) {
             server.rdb_bgsave_scheduled = 1;
             addReplyStatus(c,"Background saving scheduled");
@@ -2023,6 +2036,7 @@ void bgsaveCommand(client *c) {
                 "possible.");
         }
     } else if (rdbSaveBackground(server.rdb_filename,NULL) == C_OK) {
+        // 执行BGSAVE命令
         addReplyStatus(c,"Background saving started");
     } else {
         addReply(c,shared.err);
