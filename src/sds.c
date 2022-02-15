@@ -37,18 +37,7 @@ static inline char sdsReqType(size_t string_size) {//根据长度大小，获取
     return SDS_TYPE_64;
 }
 
-/* Create a new sds string with the content specified by the 'init' pointer
- * and 'initlen'.
- * If NULL is used for 'init' the string is initialized with zero bytes.
- *
- * The string is always null-termined (all the sds strings are, always) so
- * even if you create an sds string with:
- *
- * mystring = sdsnewlen("abc",3);
- *
- * You can print the string with printf() as there is an implicit \0 at the
- * end of the string. However the string is binary safe and can contain
- * \0 characters in the middle, as the length is stored in the sds header. */
+//// 创建一个新的字符串
 sds sdsnewlen(const void *init, size_t initlen) {
     void *sh;
     sds s;
