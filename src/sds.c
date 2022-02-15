@@ -145,7 +145,7 @@ void sdsclear(sds s) {
     s[0] = '\0';
 }
 
-// sds最重要的性能就是动态调整，Redis提供了扩展sds容量的函数。
+//// sds最重要的性能就是动态调整，Redis提供了扩展sds容量的函数。
 sds sdsMakeRoomFor(sds s, size_t addlen) {
     void *sh, *newsh;
     size_t avail = sdsavail(s);                         // 获取sds的剩余空间（sh->alloc - sh->len）
@@ -187,7 +187,7 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     return s;
 }
 
-// Redis还提供了回收sds空余空间的函数
+//// Redis还提供了回收sds空余空间的函数
 // 用来回收sds空余空间，压缩内存，函数调用后，s会无效
 // 实际上，就是重新分配一块内存，将原有数据拷贝到新内存上，并释放原有空间
 // 新内存的大小比原来小了alloc-len大小
@@ -317,7 +317,7 @@ sds sdsgrowzero(sds s, size_t len) {
     return s;
 }
 
-// sds提供了字符串的连接函数，用来连接两个字符串
+//// sds提供了字符串的连接函数，用来连接两个字符串
 sds sdscatlen(sds s, const void *t, size_t len) {
     size_t curlen = sdslen(s);              // 获取当前字符串的长度
 
