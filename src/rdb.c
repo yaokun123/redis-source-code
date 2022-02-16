@@ -894,8 +894,8 @@ int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
     for (j = 0; j < server.dbnum; j++) {
         redisDb *db = server.db+j;
         dict *d = db->dict;
-        if (dictSize(d) == 0) continue;
-        di = dictGetSafeIterator(d);
+        if (dictSize(d) == 0) continue;     // 如果该数据库中没有数据continue
+        di = dictGetSafeIterator(d);        // 获取字典迭代器
         if (!di) return C_ERR;
 
         // 写入当前数据类型
