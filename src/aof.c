@@ -1312,6 +1312,7 @@ int aofCreatePipes(void) {
     if (pipe(fds+2) == -1) goto error; /* children -> parent ack. */
     if (pipe(fds+4) == -1) goto error; /* children -> parent ack. */
     /* Parent -> children data is non blocking. */
+    //// 父子进程之间的数据通信设置为非阻塞
     if (anetNonBlock(NULL,fds[0]) != ANET_OK) goto error;
     if (anetNonBlock(NULL,fds[1]) != ANET_OK) goto error;
 
