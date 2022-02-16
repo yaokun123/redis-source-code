@@ -1165,7 +1165,8 @@ int rewriteAppendOnlyFile(char *filename) {
     char byte;
 
     // 创建临时文件
-    snprintf(tmpfile,256,"temp-rewriteaof-%d.aof", (int) getpid());
+    //snprintf(tmpfile,256,"temp-rewriteaof-bg-%d.aof", (int) getpid());  // filename
+    snprintf(tmpfile,256,"temp-rewriteaof-%d.aof", (int) getpid());       // tmpfile
     fp = fopen(tmpfile,"w");
     if (!fp) {
         serverLog(LL_WARNING, "Opening the temp file for AOF rewrite in rewriteAppendOnlyFile(): %s", strerror(errno));
@@ -1242,7 +1243,7 @@ int rewriteAppendOnlyFile(char *filename) {
     if (rioWrite(&aof,server.aof_child_diff,sdslen(server.aof_child_diff)) == 0)
         goto werr;
     // 父进程在检测到子进程退出后，会调用backgroundRewriteDoneHandler这个函数接口，完成后续的处理步骤，
-    // 我们知道依然有一些在重新AOF文件过程中被执行的命令存储在父进程的重写缓冲区之中，那么在子进程成功退出之后，
+    // 我们知道依然有一些在重写AOF文件过程中被执行的命令存储在父进程的重写缓冲区之中，那么在子进程成功退出之后，
     // 父进程会调用aofRewriteBufferWrite这个接口，将重写缓冲区之中的命令记录追加到新的AOF文件之中，最终完成整个重写AOF文件的过程。
 
     // 保证系统不会残留在IO输出缓冲区
