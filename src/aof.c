@@ -1314,14 +1314,19 @@ int aofCreatePipes(void) {
     /* Parent -> children data is non blocking. */
     if (anetNonBlock(NULL,fds[0]) != ANET_OK) goto error;
     if (anetNonBlock(NULL,fds[1]) != ANET_OK) goto error;
+
+    //// 将fds[2]和fds[3]添加到redis的文件事件中，
     if (aeCreateFileEvent(server.el, fds[2], AE_READABLE, aofChildPipeReadable, NULL) == AE_ERR) goto error;
 
-    server.aof_pipe_write_data_to_child = fds[1];
-    server.aof_pipe_read_data_from_parent = fds[0];
-    server.aof_pipe_write_ack_to_parent = fds[3];
-    server.aof_pipe_read_ack_from_child = fds[2];
-    server.aof_pipe_write_ack_to_child = fds[5];
-    server.aof_pipe_read_ack_from_parent = fds[4];
+    server.aof_pipe_write_data_to_child = fds[1];// 父写（数据）
+    server.aof_pipe_read_data_from_parent = fds[0];// 子读（数据）
+
+    server.aof_pipe_write_ack_to_parent = fds[3];// 子写
+    server.aof_pipe_read_ack_from_child = fds[2];// 父读
+
+    server.aof_pipe_write_ack_to_child = fds[5];// 父写
+    server.aof_pipe_read_ack_from_parent = fds[4];// 子读
+
     server.aof_stop_sending_diff = 0;
     return C_OK;
 
