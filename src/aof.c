@@ -122,7 +122,7 @@ void aofChildWriteDiffData(aeEventLoop *el, int fd, void *privdata, int mask) {
 }
 
 
-// 正在进行aof重写的时候，此时的命令不会追加到aof_buf中了，而是写入aof_rewrite_buf_blocks这个双端列表中
+//// 正在进行aof重写的时候，此时的命令不会追加到aof_buf中了，而是写入aof_rewrite_buf_blocks这个双端列表中
 void aofRewriteBufferAppend(unsigned char *s, unsigned long len) {
     listNode *ln = listLast(server.aof_rewrite_buf_blocks);
     aofrwblock *block = ln ? ln->value : NULL;
@@ -573,7 +573,7 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
         buf = catAppendOnlyGenericCommand(buf,argc,argv);
     }
 
-    // 将格式化的命令字符串追加到AOF缓冲区中，
+    //// 将格式化的命令字符串追加到AOF缓冲区中，
     // AOF缓冲区中的数据会在重新进入时间循环前写入到磁盘中，
     // 相应的客户端也会受到关于此次操作的回复
     if (server.aof_state == AOF_ON)

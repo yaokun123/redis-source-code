@@ -1996,7 +1996,7 @@ struct redisCommand *lookupCommandOrOriginal(sds name) {
     return cmd;
 }
 
-// Redis在每次执行客户端命令时，会通过调用propagate函数，将这个命令传递给AOF内存缓存，或者发送给集群中的Slave实例：
+//// Redis在每次执行客户端命令时，会通过调用propagate函数，将这个命令传递给AOF内存缓存，或者发送给集群中的Slave实例：
 void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
                int flags)
 {
