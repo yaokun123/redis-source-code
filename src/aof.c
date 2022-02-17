@@ -1201,8 +1201,6 @@ int rewriteAppendOnlyFile(char *filename) {
 
 
     //// 读取最终的差异数据，父进程与子进程通过管道通信
-    // 会循环数次尝试从redisServer.aof_pipe_read_data_from_parent对应的管道中调用aofReadDiffFromParent函数读取父进程发送来的命令记录，
-    // 并将这些数据存储在子进程redisServer.aof_child_diff缓存之中
     int nodata = 0;
     mstime_t start = mstime();
     while(mstime()-start < 1000 && nodata < 20) {
@@ -1213,13 +1211,15 @@ int rewriteAppendOnlyFile(char *filename) {
         }
         nodata = 0; /* Start counting from zero, we stop on N *contiguous*
                        timeouts. */
+
+        //// 会循环数次尝试从redisServer.aof_pipe_read_data_from_parent对应的管道中读取父进程发送来的命令记录，
+        //// 并将这些数据存储在子进程redisServer.aof_child_diff缓存之中
         aofReadDiffFromParent();
     }
 
-    // 以下是读取在重写AOF文件时，服务器新加入的数据
-    // 告诉父进程停止增加数据
-    // 子进程在rewriteAppendOnlyFile函数完成aofReadDiffFromParent数据读取时，
-    // 向redisServer.aof_pipe_write_ack_to_parent这个管道的写入端写入一个!通知父进程
+
+    //// 以下是读取在重写AOF文件时，服务器新加入的数据
+    // 向道的写入端写入一个!通知父进程停止增加数据
     if (write(server.aof_pipe_write_ack_to_parent,"!",1) != 1) goto werr;
     if (anetNonBlock(NULL,server.aof_pipe_read_ack_from_parent) != ANET_OK)
         goto werr;
@@ -1232,19 +1232,19 @@ int rewriteAppendOnlyFile(char *filename) {
         byte != '!') goto werr;
     serverLog(LL_NOTICE,"Parent agreed to stop sending diffs. Finalizing AOF...");
 
-    // 子进程在收到父进程的确认信息之后，最后在调用一次aofReadDiffFromParent完成数据的读取，
+    // 子进程在收到父进程的确认信息之后，最后再调用一次aofReadDiffFromParent完成数据的读取，
     aofReadDiffFromParent();
 
 
-    // 然后将记录在redisServer.aof_child_diff缓存中的数据追加到重写后的AOF文件之中。子进程在完成数据写入之后，成功结束。
+    //// 然后将记录在redisServer.aof_child_diff缓存中的数据追加到重写后的AOF文件之中。子进程在完成数据写入之后，成功结束。
     serverLog(LL_NOTICE,
         "Concatenating %.2f MB of AOF diff received from parent.",
         (double) sdslen(server.aof_child_diff) / (1024*1024));
     if (rioWrite(&aof,server.aof_child_diff,sdslen(server.aof_child_diff)) == 0)
         goto werr;
-    // 父进程在检测到子进程退出后，会调用backgroundRewriteDoneHandler这个函数接口，完成后续的处理步骤，
+    //// 父进程在检测到子进程退出后，会调用backgroundRewriteDoneHandler这个函数接口，完成后续的处理步骤，
     // 我们知道依然有一些在重写AOF文件过程中被执行的命令存储在父进程的重写缓冲区之中，那么在子进程成功退出之后，
-    // 父进程会调用aofRewriteBufferWrite这个接口，将重写缓冲区之中的命令记录追加到新的AOF文件之中，最终完成整个重写AOF文件的过程。
+    //// 父进程会调用aofRewriteBufferWrite这个接口，将重写缓冲区之中的命令记录追加到新的AOF文件之中，最终完成整个重写AOF文件的过程。
 
     // 保证系统不会残留在IO输出缓冲区
     if (fflush(fp) == EOF) goto werr;
@@ -1252,7 +1252,7 @@ int rewriteAppendOnlyFile(char *filename) {
     if (fclose(fp) == EOF) goto werr;
 
 
-    // 重命名AOF文件
+    //// 重命名AOF文件
     if (rename(tmpfile,filename) == -1) {
         serverLog(LL_WARNING,"Error moving temp append only file on the final destination: %s", strerror(errno));
         unlink(tmpfile);
