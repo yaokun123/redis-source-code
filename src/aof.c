@@ -1472,7 +1472,7 @@ void aofUpdateCurrentSize(void) {
     latencyAddSampleIfNeeded("aof-fstat",latency);
 }
 
-//// 执行AOF后台重写缓冲区内数据的重写和更名操作，完成整个AOF后台重写功能
+//// 执行AOF后台重写的剩余工作（缓冲区内数据的重写和更名操作）
 void backgroundRewriteDoneHandler(int exitcode, int bysignal) {
     if (!bysignal && exitcode == 0) {
         int newfd, oldfd;
@@ -1486,15 +1486,18 @@ void backgroundRewriteDoneHandler(int exitcode, int bysignal) {
         /* Flush the differences accumulated by the parent to the
          * rewritten AOF. */
         latencyStartMonitor(latency);
+
+        //// 临时文件，与aof重写最开始的那一步生成的临时文件名相同
         snprintf(tmpfile,256,"temp-rewriteaof-bg-%d.aof",
             (int)server.aof_child_pid);
-        newfd = open(tmpfile,O_WRONLY|O_APPEND);
+        newfd = open(tmpfile,O_WRONLY|O_APPEND);            // 打开临时文件，获取句柄
         if (newfd == -1) {
             serverLog(LL_WARNING,
                 "Unable to open the temporary AOF produced by the child: %s", strerror(errno));
             goto cleanup;
         }
 
+        //// 将缓冲区中的数据追加到临时文件中
         if (aofRewriteBufferWrite(newfd) == -1) {
             serverLog(LL_WARNING,
                 "Error trying to flush the parent diff to the rewritten AOF: %s", strerror(errno));
@@ -1548,6 +1551,7 @@ void backgroundRewriteDoneHandler(int exitcode, int bysignal) {
 
         /* Rename the temporary file. This will not unlink the target file if
          * it exists, because we reference it with "oldfd". */
+        //// aof临时文件重新命名为aof的正式文件
         latencyStartMonitor(latency);
         if (rename(tmpfile,server.aof_filename) == -1) {
             serverLog(LL_WARNING,
