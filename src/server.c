@@ -1003,7 +1003,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
             }
          }
 
-        // 如果后台没有执行rdb，aof，以及aof重写操作，而且aof文件的大于执行BGREWRITEAOF所需的最小大小
+        //// 如果后台没有执行rdb，aof，以及aof重写操作，而且aof文件的大于执行BGREWRITEAOF所需的最小大小
          if (server.rdb_child_pid == -1 &&
              server.aof_child_pid == -1 &&
              server.aof_rewrite_perc &&
