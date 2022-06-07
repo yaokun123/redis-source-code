@@ -2,13 +2,15 @@
 #define __ADLIST_H__
 
 
-// 链表节点定义
+//// 链表节点定义
 typedef struct listNode {
     struct listNode *prev;          // 指向前一个节点
     struct listNode *next;          // 指向后一个节点
     void *value;                    // 节点值
 } listNode;
 
+
+//// 链表定义
 typedef struct list {
     listNode *head;                 // 指向链表头节点
     listNode *tail;                 // 指向链表尾节点
@@ -18,11 +20,13 @@ typedef struct list {
     unsigned long len;              // 链表长度
 } list;
 
-//迭代器结构,其能正序和逆序的访问list结构
+
+//// 迭代器结构，能正序和逆序的访问list结构
 typedef struct listIter {
     listNode *next;                 // 指向下一个节点
     int direction;                  // 方向参数，正序和逆序
 } listIter;
+
 
 /* Functions implemented as macros */
 #define listLength(l) ((l)->len)                    // 获取list长度
@@ -59,8 +63,8 @@ void listRewindTail(list *list, listIter *li);                                  
 void listRotate(list *list);                                                        // 旋转函数
 void listJoin(list *l, list *o);                                                    // 合并链表，将合并到l上，释放o
 
-/* Directions for iterators */
-#define AL_START_HEAD 0                         // 从头到尾
-#define AL_START_TAIL 1                         // 从尾到头
+//// 定义迭代器的顺序
+#define AL_START_HEAD 0                         // 从头开始
+#define AL_START_TAIL 1                         // 从尾开始
 
 #endif /* __ADLIST_H__ */
