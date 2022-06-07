@@ -101,11 +101,11 @@ int dictResize(dict *d)
     return dictExpand(d, minimal);
 }
 
-// 扩容 或 新建hash table
+//// 扩容 或 新建hash table
 int dictExpand(dict *d, unsigned long size)
 {
     dictht n;
-    unsigned long realsize = _dictNextPower(size);              // 计算新的hash table数组容量
+    unsigned long realsize = _dictNextPower(size);              // 计算新的hash table数组容量，2的倍数
 
     if (dictIsRehashing(d) || d->ht[0].used > size)             // 正在rehash直接返回
         return DICT_ERR;
@@ -203,18 +203,21 @@ static void _dictRehashStep(dict *d) {
     if (d->iterators == 0) dictRehash(d,1);
 }
 
-//添加键值对
+//// 添加键值对
+//// 为什么设置键和值要分开呢？是因为要先查询键是否存在，如果存在就覆盖值，不存在才新建
 int dictAdd(dict *d, void *key, void *val)
 {
-    dictEntry *entry = dictAddRaw(d,key,NULL);      // 往字典中添加一个只有key的键值对
+    // 返回的entry可能是已经存在的节点，也可能是新建的节点
+    //// 这里existing设置的是NULL，代表该方法只做新增，不做更新（如果key存在就直接返回）
+    dictEntry *entry = dictAddRaw(d,key,NULL);       // 往字典中添加一个只有key的键值对
 
     if (!entry) return DICT_ERR;                            // 如果添加失败，则返回错误
     dictSetVal(d, entry, val);                              // 为添加的只有key键值对设定值
     return DICT_OK;
 }
 
-//如果此时没有进行rehash操作，直接计算出索引添加到ht[0]中
-//如果此刻正在进行rehash操作，则根据ht[1]的参数计算出索引值，添加到ht[1]中
+// 如果此时没有进行rehash操作，直接计算出索引添加到ht[0]中
+// 如果此刻正在进行rehash操作，则根据ht[1]的参数计算出索引值，添加到ht[1]中
 dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
 {
     int index;
@@ -223,7 +226,8 @@ dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
 
     if (dictIsRehashing(d)) _dictRehashStep(d);                             // 如果正在进行rehash操作，则先执行一下rehash操作
 
-    if ((index = _dictKeyIndex(d, key, dictHashKey(d,key), existing)) == -1)// 获取新键值对的索引值，如果key存在则返回-1
+    //// 比较key的时候，如果初始化的时候有设置keyCompare那么就调用keyCompare函数，如果没有设置比较的就是地址
+    if ((index = _dictKeyIndex(d, key, dictHashKey(d,key), existing)) == -1)// 判断key是否在字典中存在，存在返回-1
         return NULL;
 
     ht = dictIsRehashing(d) ? &d->ht[1] : &d->ht[0];                        // 如果正在进行rehash则添加到ht[1]，反之则添加到ht[0]
@@ -233,7 +237,7 @@ dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
     ht->used++;
 
     /* Set the hash entry fields. */
-    dictSetKey(d, entry, key);                                              // 设定键的大小
+    dictSetKey(d, entry, key);                                              // 给节点设定键
     return entry;
 }
 
@@ -702,7 +706,7 @@ static int _dictExpandIfNeeded(dict *d)
     return DICT_OK;
 }
 
-// 计算数组大小，最小容量为4，每次乘2，直到算出>size的容量停止
+//// 计算hash表数组大小，最小容量为4，每次乘2，直到算出>size的容量停止
 static unsigned long _dictNextPower(unsigned long size)
 {
     unsigned long i = DICT_HT_INITIAL_SIZE;
