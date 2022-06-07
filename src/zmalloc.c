@@ -97,7 +97,9 @@ void zfree_no_tcache(void *ptr) {
 }
 #endif
 
-void *zcalloc(size_t size) {//与malloc一样，zcalloc调用的是系统给的calloc()来申请内存。
+
+//// 与zmalloc一样，zcalloc调用的是系统给的calloc()来申请内存。
+void *zcalloc(size_t size) {
     void *ptr = calloc(1, size+PREFIX_SIZE);
 
     if (!ptr) zmalloc_oom_handler(size);
