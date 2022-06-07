@@ -91,10 +91,10 @@ int dictResize(dict *d)
 {
     int minimal;
 
-    // 不能resize 或 正在rehash直接返回
+    // 不能resize 或 正在rehash直接返回，dict_can_resize为全局变量
     if (!dict_can_resize || dictIsRehashing(d)) return DICT_ERR;
 
-    // 根据ht[0].used重新计算数组大小
+    // 根据ht[0].used（哈希表中节点个数）重新计算数组大小
     minimal = d->ht[0].used;                // 元素个数
     if (minimal < DICT_HT_INITIAL_SIZE)     // 如果元素个数小于4，最小size就按照4来算
         minimal = DICT_HT_INITIAL_SIZE;
@@ -107,7 +107,8 @@ int dictExpand(dict *d, unsigned long size)
     dictht n;
     unsigned long realsize = _dictNextPower(size);              // 计算新的hash table数组容量，2的倍数
 
-    if (dictIsRehashing(d) || d->ht[0].used > size)             // 正在rehash直接返回
+    //// 正在rehash直接返回，或传入的size小于节点个数也返回
+    if (dictIsRehashing(d) || d->ht[0].used > size)
         return DICT_ERR;
 
     if (realsize == d->ht[0].size) return DICT_ERR;             // 新的容量与旧容量相同，直接返回
@@ -178,7 +179,7 @@ int dictRehash(dict *d, int n) {
     return 1;                                                       // 如果没有完成rehash则返回1
 }
 
-// 获取当前的时间戳（一毫秒为单位）
+//// 获取当前的时间戳（以毫秒为单位）
 long long timeInMilliseconds(void) {
     struct timeval tv;
 
@@ -186,7 +187,7 @@ long long timeInMilliseconds(void) {
     return (((long long)tv.tv_sec)*1000)+(tv.tv_usec/1000);
 }
 
-// rehash操作每次执行ms时间就退出
+//// rehash操作每次执行{ms}时间就退出。每次执行100步
 int dictRehashMilliseconds(dict *d, int ms) {
     long long start = timeInMilliseconds();
     int rehashes = 0;
@@ -198,7 +199,8 @@ int dictRehashMilliseconds(dict *d, int ms) {
     return rehashes;
 }
 
-// 在执行查询和更新操作时，如果符合rehash条件就会触发一次rehash操作，每次执行一步
+//// 在执行查询和更新操作时，如果符合rehash条件就会触发一次rehash操作，每次执行1步
+//// 前提是当前没有正在使用的迭代器
 static void _dictRehashStep(dict *d) {
     if (d->iterators == 0) dictRehash(d,1);
 }
@@ -216,8 +218,8 @@ int dictAdd(dict *d, void *key, void *val)
     return DICT_OK;
 }
 
-// 如果此时没有进行rehash操作，直接计算出索引添加到ht[0]中
-// 如果此刻正在进行rehash操作，则根据ht[1]的参数计算出索引值，添加到ht[1]中
+//// 如果此时没有进行rehash操作，直接计算出索引添加到ht[0]中
+//// 如果此刻正在进行rehash操作，则根据ht[1]的参数计算出索引值，添加到ht[1]中
 dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
 {
     int index;
@@ -241,8 +243,8 @@ dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
     return entry;
 }
 
-// 上述添加方式在，在存在该key的时候，直接返回NULL，Redis还提供了另一种添加键值对的函数，
-// 它在处理存在相同key的情况时，直接用新键值对来替换旧键值对。
+//// 上述添加方式在，在存在该key的时候，直接返回NULL，Redis还提供了另一种添加键值对的函数，
+//// 它在处理存在相同key的情况时，直接用新键值对来替换旧键值对。
 int dictReplace(dict *d, void *key, void *val)
 {
     dictEntry *entry, *existing, auxentry;
@@ -260,14 +262,14 @@ int dictReplace(dict *d, void *key, void *val)
     return 0;
 }
 
-// 添加 / 查找
+//// 根据key在字典中 添加 / 查找
 dictEntry *dictAddOrFind(dict *d, void *key) {
     dictEntry *entry, *existing;
     entry = dictAddRaw(d,key,&existing);
     return entry ? entry : existing;
 }
 
-// 查找并删除指定键对应的键值对
+//// 查找并删除指定键对应的键值对
 static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
     unsigned int h, idx;
     dictEntry *he, *prevHe;
@@ -284,12 +286,14 @@ static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
         prevHe = NULL;
         while(he) {
             if (key==he->key || dictCompareKeys(d, key, he->key)) {
-                // 找到节点，要删除
+                //// 找到节点，要删除
                 if (prevHe)                                                 // 如果不是第一个节点
                     prevHe->next = he->next;
                 else                                                        // 如果是第一个节点
                     d->ht[table].table[idx] = he->next;
-                if (!nofree) {                                              // 是否释放这个姐节点
+
+                //// 是否释放这个节点
+                if (!nofree) {
                     dictFreeKey(d, he);
                     dictFreeVal(d, he);
                     zfree(he);
@@ -305,17 +309,17 @@ static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
     return NULL; /* not found */
 }
 
-// 删除该键值对，并释放键和值
+//// 删除该键值对，并释放键和值
 int dictDelete(dict *ht, const void *key) {
     return dictGenericDelete(ht,key,0) ? DICT_OK : DICT_ERR;
 }
 
-// 删除该键值对，不释放键和值
+//// 删除该键值对，不释放键和值
 dictEntry *dictUnlink(dict *ht, const void *key) {
     return dictGenericDelete(ht,key,1);
 }
 
-// 释放一个节点
+//// 释放一个节点
 void dictFreeUnlinkedEntry(dict *d, dictEntry *he) {
     if (he == NULL) return;
     dictFreeKey(d, he);
@@ -323,7 +327,7 @@ void dictFreeUnlinkedEntry(dict *d, dictEntry *he) {
     zfree(he);
 }
 
-// 释放哈希表
+//// 释放哈希表
 int _dictClear(dict *d, dictht *ht, void(callback)(void *)) {
     unsigned long i;
 
@@ -347,7 +351,7 @@ int _dictClear(dict *d, dictht *ht, void(callback)(void *)) {
     return DICT_OK;
 }
 
-//字典删除
+//// 字典删除
 void dictRelease(dict *d)
 {
     _dictClear(d,&d->ht[0],NULL);   // 清除哈希表ht[0]
@@ -356,7 +360,7 @@ void dictRelease(dict *d)
 }
 
 
-//根据键在字典中查找对应的节点
+//// 根据键在字典中查找对应的节点
 dictEntry *dictFind(dict *d, const void *key)
 {
     dictEntry *he;
@@ -378,7 +382,7 @@ dictEntry *dictFind(dict *d, const void *key)
     return NULL;
 }
 
-//根据键在字典中查找对应的节点值
+//// 根据键在字典中查找对应的节点值
 void *dictFetchValue(dict *d, const void *key) {
     dictEntry *he;
 
@@ -386,7 +390,7 @@ void *dictFetchValue(dict *d, const void *key) {
     return he ? dictGetVal(he) : NULL;
 }
 
-// 字典状态展示
+//// 字典状态展示
 long long dictFingerprint(dict *d) {
     long long integers[6], hash = 0;
     int j;
@@ -394,6 +398,7 @@ long long dictFingerprint(dict *d) {
     integers[0] = (long) d->ht[0].table;
     integers[1] = d->ht[0].size;            // ht[0]数组大小
     integers[2] = d->ht[0].used;            // ht[0]元素个数
+
     integers[3] = (long) d->ht[1].table;
     integers[4] = d->ht[1].size;            // ht[1]数组大小
     integers[5] = d->ht[1].used;            // ht[1]元素个数
@@ -413,7 +418,7 @@ long long dictFingerprint(dict *d) {
     return hash;
 }
 
-// 获取一个字典迭代器
+//// 获取一个字典迭代器
 dictIterator *dictGetIterator(dict *d)
 {
     dictIterator *iter = zmalloc(sizeof(*iter));
@@ -427,7 +432,7 @@ dictIterator *dictGetIterator(dict *d)
     return iter;
 }
 
-// 获取一个安全的字典迭代器
+//// 获取一个安全的字典迭代器
 dictIterator *dictGetSafeIterator(dict *d) {
     dictIterator *i = dictGetIterator(d);
 
@@ -435,12 +440,12 @@ dictIterator *dictGetSafeIterator(dict *d) {
     return i;
 }
 
-// 根据迭代器获取一个节点
+//// 根据迭代器获取一个节点
 dictEntry *dictNext(dictIterator *iter)
 {
     while (1) {
-        if (iter->entry == NULL) {
-            dictht *ht = &iter->d->ht[iter->table];
+        if (iter->entry == NULL) {                                  // 入口节点为空
+            dictht *ht = &iter->d->ht[iter->table];                 // 获取hashtable地址
             if (iter->index == -1 && iter->table == 0) {
                 if (iter->safe)
                     iter->d->iterators++;
@@ -471,7 +476,7 @@ dictEntry *dictNext(dictIterator *iter)
     return NULL;
 }
 
-// 释放迭代器
+//// 释放迭代器
 void dictReleaseIterator(dictIterator *iter)
 {
     if (!(iter->index == -1 && iter->table == 0)) {
@@ -483,7 +488,7 @@ void dictReleaseIterator(dictIterator *iter)
     zfree(iter);
 }
 
-// 从字典中随机返回一个节点
+//// 从字典中随机返回一个节点
 dictEntry *dictGetRandomKey(dict *d)
 {
     dictEntry *he, *orighe;
@@ -524,7 +529,7 @@ dictEntry *dictGetRandomKey(dict *d)
     return he;
 }
 
-// 得到一些keys
+//// 得到一些keys
 unsigned int dictGetSomeKeys(dict *d, dictEntry **des, unsigned int count) {
     unsigned long j; /* internal hash table id, 0 or 1. */
     unsigned long tables; /* 1 or 2 tables? */
@@ -719,7 +724,7 @@ static unsigned long _dictNextPower(unsigned long size)
     }
 }
 
-// 根据key算出index，如果存在返回-1，并设置existing为存在的节点
+//// 根据key算出index，如果存在返回-1，并设置existing为存在的节点
 static int _dictKeyIndex(dict *d, const void *key, unsigned int hash, dictEntry **existing)
 {
     unsigned int idx, table;
@@ -749,7 +754,7 @@ static int _dictKeyIndex(dict *d, const void *key, unsigned int hash, dictEntry 
     return idx;
 }
 
-// 清空字典
+//// 清空字典
 void dictEmpty(dict *d, void(callback)(void*)) {
     _dictClear(d,&d->ht[0],callback);
     _dictClear(d,&d->ht[1],callback);
@@ -757,17 +762,17 @@ void dictEmpty(dict *d, void(callback)(void*)) {
     d->iterators = 0;
 }
 
-// 设置可以resize
+//// 设置可以resize
 void dictEnableResize(void) {
     dict_can_resize = 1;
 }
 
-// 禁止resize
+//// 禁止resize
 void dictDisableResize(void) {
     dict_can_resize = 0;
 }
 
-// 根据key计算hash值
+//// 根据key计算hash值
 unsigned int dictGetHash(dict *d, const void *key) {
     return dictHashKey(d, key);
 }
