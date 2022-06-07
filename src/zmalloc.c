@@ -31,21 +31,24 @@
 #define dallocx(ptr,flags) je_dallocx(ptr,flags)
 #endif
 
+//// 更新used_memory的使用情况-增加
 #define update_zmalloc_stat_alloc(__n) do { \
     size_t _n = (__n); \
     if (_n&(sizeof(long)-1)) _n += sizeof(long)-(_n&(sizeof(long)-1)); \
     atomicIncr(used_memory,__n); \
 } while(0)
 
+//// 更新used_memory的使用情况-减少
 #define update_zmalloc_stat_free(__n) do { \
     size_t _n = (__n); \
     if (_n&(sizeof(long)-1)) _n += sizeof(long)-(_n&(sizeof(long)-1)); \
     atomicDecr(used_memory,__n); \
 } while(0)
 
-static size_t used_memory = 0;          // 已使用内存的大小
+static size_t used_memory = 0;                                  // 已使用内存的大小
 pthread_mutex_t used_memory_mutex = PTHREAD_MUTEX_INITIALIZER;  // 为此服务器
 
+//// 异常处理函数
 static void zmalloc_default_oom(size_t size) {
     fprintf(stderr, "zmalloc: Out of memory trying to allocate %zu bytes\n",
         size);              // 打印输出日志
@@ -53,9 +56,11 @@ static void zmalloc_default_oom(size_t size) {
     abort();                // 中断退出
 }
 
+//// 定义异常处理函数为
 static void (*zmalloc_oom_handler)(size_t) = zmalloc_default_oom;
 
-void *zmalloc(size_t size) {// Redis的内存申请函数zmalloc本质就是调用了系统的malloc函数，然后对其进行了适当的封装，加上了异常处理函数和内存统计
+//// Redis的内存申请函数zmalloc本质就是调用了系统的malloc函数，然后对其进行了适当的封装，加上了异常处理函数和内存统计
+void *zmalloc(size_t size) {
     // 调用malloc函数进行内存申请
     // 多申请的PREFIX_SIZE大小的内存用于记录该段内存的大小
     void *ptr = malloc(size+PREFIX_SIZE);
@@ -63,7 +68,7 @@ void *zmalloc(size_t size) {// Redis的内存申请函数zmalloc本质就是调�
     // 如果ptr为NULL，则调用异常处理函数
     if (!ptr) zmalloc_oom_handler(size);
 
-    // 以下是内存统计
+    // 分配内存成功后，进行内存统计，然后返回申请的地址
 #ifdef HAVE_MALLOC_SIZE
     update_zmalloc_stat_alloc(zmalloc_size(ptr));
     return ptr;
