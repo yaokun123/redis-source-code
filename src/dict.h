@@ -9,7 +9,7 @@
 /* Unused arguments generate annoying warnings... */
 #define DICT_NOTUSED(V) ((void) V)
 
-//哈希表节点
+//// 哈希表节点
 typedef struct dictEntry {
     void *key;                  // 键
     union {
@@ -17,11 +17,12 @@ typedef struct dictEntry {
         uint64_t u64;
         int64_t s64;
         double d;
-    } v;                        // 值
-    struct dictEntry *next;     // 指向下一个哈希表节点，用来解决hash冲突的
+    } v;                        // 值（除了数值部分，其他都是指针）
+    struct dictEntry *next;     // 指向下一个哈希表节点，用来解决hash冲突的。此处可以看出字典采用了链地址法解决哈希冲突
 } dictEntry;
 
-//字典类型函数
+
+//// 字典类型函数
 typedef struct dictType {
     uint64_t (*hashFunction)(const void *key);                                  // 计算哈希值的函数
     void *(*keyDup)(void *privdata, const void *key);                           // 复制键的函数
@@ -31,25 +32,27 @@ typedef struct dictType {
     void (*valDestructor)(void *privdata, void *obj);                           // 销毁值的函数
 } dictType;
 
-//哈希表
+
+//// 哈希表
 typedef struct dictht {
     dictEntry **table;          // 哈希表数组
-    unsigned long size;         // 哈希表大小
-    unsigned long sizemask;     // 哈希表大小掩码，用于计算索引值
+    unsigned long size;         // 哈希表大小，也即是table数组的大小
+    unsigned long sizemask;     // 哈希表大小掩码，用于计算索引值。总是等于size-1
     unsigned long used;         // 该哈希表中已有节点的数量
 } dictht;
 
 
-//字典
+//// 字典
 typedef struct dict {
     dictType *type;             // 字典类型，保存一些用于操作特定类型键值对的函数
     void *privdata;             // 私有数据，保存需要传给那些类型特定函数的可选数据
-    dictht ht[2];               // 一个字典结构包括两个哈希表，渐进式rehash时使用
-    long rehashidx;             // rehash索引，不进行rehash时其值为-1
+    dictht ht[2];               // 一个字典结构包括两个哈希表。一般情况下，字典只使用ht[0]哈希表，渐进式rehash时使用ht[1]。
+    long rehashidx;             // rehash索引，记录了rehash目前的进度。不进行rehash时其值为-1。
     unsigned long iterators;    // 当前正在使用的迭代器数量
 } dict;
 
-// 字典迭代器
+
+//// 字典迭代器
 typedef struct dictIterator {
     dict *d;                            // 字典
     long index;
