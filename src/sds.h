@@ -87,6 +87,7 @@ static inline size_t sdslen(const sds s) {
     return 0;
 }
 
+//// 根据字符串地址，获取剩余空间（alloc-len）
 static inline size_t sdsavail(const sds s) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
@@ -113,6 +114,7 @@ static inline size_t sdsavail(const sds s) {
     return 0;
 }
 
+//// 根据字符串地址，更新字符串长度（len=newlen）
 static inline void sdssetlen(sds s, size_t newlen) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
@@ -137,6 +139,7 @@ static inline void sdssetlen(sds s, size_t newlen) {
     }
 }
 
+//// 根据字符串地址，根据步长更新字符串长度（len+=inc）
 static inline void sdsinclen(sds s, size_t inc) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
@@ -163,6 +166,7 @@ static inline void sdsinclen(sds s, size_t inc) {
 }
 
 /* sdsalloc() = sdsavail() + sdslen() */
+//// 根据字符串地址，获取分配的空间（alloc）
 static inline size_t sdsalloc(const sds s) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
@@ -180,6 +184,7 @@ static inline size_t sdsalloc(const sds s) {
     return 0;
 }
 
+//// 根据字符串地址，设置字符串的分配空间（alloc=newlen）
 static inline void sdssetalloc(sds s, size_t newlen) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
