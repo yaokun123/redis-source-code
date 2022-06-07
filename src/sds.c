@@ -25,7 +25,7 @@ static inline int sdsHdrSize(char type) {
 }
 
 
-//// 根据长度大小，获取对应的type以设置flag
+//// 根据长度大小，获取对应的type
 static inline char sdsReqType(size_t string_size) {
     if (string_size < 1<<5)
         return SDS_TYPE_5;
@@ -658,14 +658,16 @@ void sdsrange(sds s, int start, int end) {
     sdssetlen(s,newlen);
 }
 
-/* Apply tolower() to every character of the sds string 's'. */
+
+//// 字符串转小写
 void sdstolower(sds s) {
     int len = sdslen(s), j;
 
     for (j = 0; j < len; j++) s[j] = tolower(s[j]);
 }
 
-/* Apply toupper() to every character of the sds string 's'. */
+
+//// 字符串转大写
 void sdstoupper(sds s) {
     int len = sdslen(s), j;
 
