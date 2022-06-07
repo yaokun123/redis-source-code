@@ -2,12 +2,12 @@
 #include "adlist.h"
 #include "zmalloc.h"
 
-//创建一个空的链表
+//// 创建一个空的链表，此时只是有了个list的结构，还没有任何节点
 list *listCreate(void)
 {
     struct list *list;                                  // 定义一个链表指针
 
-    if ((list = zmalloc(sizeof(*list))) == NULL)        // 申请内存
+    if ((list = zmalloc(sizeof(*list))) == NULL)        // 申请内存一个struct list的大小
         return NULL;
     list->head = list->tail = NULL;                     // 空链表的头指针和尾指针均为空
     list->len = 0;                                      // 设定长度
@@ -17,6 +17,7 @@ list *listCreate(void)
     return list;
 }
 
+//// 清空一个链表
 void listEmpty(list *list)
 {
     unsigned long len;
@@ -24,7 +25,9 @@ void listEmpty(list *list)
 
     current = list->head;                               // 头部节点
     len = list->len;                                    // 链表长度
-    while(len--) {                                      // 根据链表长度循环释放每一个节点
+
+    //// 根据链表长度循环释放每一个节点
+    while(len--) {
         next = current->next;
         if (list->free) list->free(current->value);     // 如果有自定义释放函数调用之
         zfree(current);
@@ -34,14 +37,14 @@ void listEmpty(list *list)
     list->len = 0;                                      // 链表长度为0
 }
 
-//释放整个链表
+//// 释放整个链表
 void listRelease(list *list)
 {
-    listEmpty(list);    //
+    listEmpty(list);    // 清空链表
     zfree(list);        // 释放链表头
 }
 
-//该函数向list的头部插入一个节点
+//// 向list的头部插入一个节点
 list *listAddNodeHead(list *list, void *value)
 {
     listNode *node;
@@ -62,7 +65,7 @@ list *listAddNodeHead(list *list, void *value)
     return list;
 }
 
-//向尾部添加节点
+//// 向尾部添加节点
 list *listAddNodeTail(list *list, void *value)
 {
     listNode *node;
@@ -83,7 +86,7 @@ list *listAddNodeTail(list *list, void *value)
     return list;
 }
 
-//向任意位置插入节点
+//// 向任意位置插入节点
 list *listInsertNode(list *list, listNode *old_node, void *value, int after) {
     listNode *node;
 
@@ -113,18 +116,21 @@ list *listInsertNode(list *list, listNode *old_node, void *value, int after) {
     return list;
 }
 
-//删除节点
+//// 删除节点
 void listDelNode(list *list, listNode *node)
 {
     if (node->prev)                         // 删除节点不为头节点
         node->prev->next = node->next;
     else                                    // 删除节点为头节点需要改变head的指向
         list->head = node->next;
+
     if (node->next)                         // 删除节点不为尾节点
         node->next->prev = node->prev;
     else                                    // 删除节点为尾节点需要改变tail的指向
         list->tail = node->prev;
-    if (list->free) list->free(node->value);    // 释放节点值
+
+    //// 释放
+    if (list->free) list->free(node->value);// 释放节点值
     zfree(node);                            // 释放节点
     list->len--;                            // 长度-1
 }
