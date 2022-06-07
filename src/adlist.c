@@ -135,7 +135,7 @@ void listDelNode(list *list, listNode *node)
     list->len--;                            // 长度-1
 }
 
-//获取迭代器
+//// 获取迭代器
 listIter *listGetIterator(list *list, int direction)
 {
     listIter *iter;                 // 声明迭代器
@@ -150,23 +150,28 @@ listIter *listGetIterator(list *list, int direction)
     return iter;
 }
 
-//释放迭代器
+
+//// 释放迭代器
 void listReleaseIterator(listIter *iter) {
     zfree(iter);
 }
 
-//重置正向迭代器
+
+//// 重置正向迭代器
 void listRewind(list *list, listIter *li) {
     li->next = list->head;
     li->direction = AL_START_HEAD;
 }
-//重置逆向迭代器
+
+
+//// 重置逆向迭代器
 void listRewindTail(list *list, listIter *li) {
     li->next = list->tail;
     li->direction = AL_START_TAIL;
 }
 
-//获取迭代器下一个节点
+
+//// 根据迭代器获取一个节点
 listNode *listNext(listIter *iter)
 {
     listNode *current = iter->next;
@@ -180,7 +185,7 @@ listNode *listNext(listIter *iter)
     return current;
 }
 
-//链表复制
+//// 复制链表
 list *listDup(list *orig)
 {
     list *copy;
@@ -189,11 +194,12 @@ list *listDup(list *orig)
 
     if ((copy = listCreate()) == NULL)
         return NULL;
-    // 复制节点值操作函数
+    //// 复制节点值操作函数
     copy->dup = orig->dup;
     copy->free = orig->free;
     copy->match = orig->match;
-    // 重置迭代器
+
+    //// 用正向迭代器来遍历节点
     listRewind(orig, &iter);
     while((node = listNext(&iter)) != NULL) {
         void *value;
@@ -214,7 +220,7 @@ list *listDup(list *orig)
     return copy;
 }
 
-//根据给定节点值，在链表中查找该节点
+//// 根据给定节点值，在链表中查找该节点，比较的是指针（地址）
 listNode *listSearchKey(list *list, void *key)
 {
     listIter iter;
@@ -235,7 +241,7 @@ listNode *listSearchKey(list *list, void *key)
     return NULL;
 }
 
-//根据序号来查找节点
+//// 根据序号来查找节点
 listNode *listIndex(list *list, long index) {
     listNode *n;
 
@@ -250,7 +256,7 @@ listNode *listIndex(list *list, long index) {
     return n;
 }
 
-//旋转函数
+//// 旋转函数
 void listRotate(list *list) {
     listNode *tail = list->tail;
 
@@ -267,7 +273,7 @@ void listRotate(list *list) {
     list->head = tail;
 }
 
-// 合并链表，将合并到l上，释放o
+//// 合并链表，将合并到l上，清空o
 void listJoin(list *l, list *o) {
     if (o->head)
         o->head->prev = l->tail;
