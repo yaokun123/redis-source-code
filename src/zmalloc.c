@@ -113,21 +113,23 @@ void *zcalloc(size_t size) {
 #endif
 }
 
-void *zrealloc(void *ptr, size_t size) {//Redis定义的zrecalloc用于调整已申请内存的大小，其本质也是直接调用系统函数recalloc()
+
+//// 用于调整已申请内存的大小，其本质也是直接调用系统函数recalloc()
+void *zrealloc(void *ptr, size_t size) {
 #ifndef HAVE_MALLOC_SIZE
     void *realptr;
 #endif
     size_t oldsize;
     void *newptr;
 
-    if (ptr == NULL) return zmalloc(size);                  // 为空直接退出
+    if (ptr == NULL) return zmalloc(size);                  // 如果传入的地址为空，就是新申请一段内存空间
 #ifdef HAVE_MALLOC_SIZE
-    oldsize = zmalloc_size(ptr);                            // 原始大小
-    newptr = realloc(ptr,size);                             // 调用recalloc函数
+    oldsize = zmalloc_size(ptr);                            // 根据传入的地址获取该地址的原始大小
+    newptr = realloc(ptr,size);                             // 调用recalloc函数，返回新地址（注意：新地址可能与旧地址一样也可能不一样）
     if (!newptr) zmalloc_oom_handler(size);                 // 错误处理
 
     update_zmalloc_stat_free(oldsize);                      // 内存统计-减去旧空间大小
-    update_zmalloc_stat_alloc(zmalloc_size(newptr));    //  内存统计-加上新空间大小
+    update_zmalloc_stat_alloc(zmalloc_size(newptr));    // 内存统计-加上新空间大小
     return newptr;
 #else
     realptr = (char*)ptr-PREFIX_SIZE;
@@ -156,7 +158,9 @@ size_t zmalloc_size(void *ptr) {
 }
 #endif
 
-void zfree(void *ptr) {// 与内存申请函数调用malloc一样，内存释放也是调用系统的free()函数来实现内存释放
+
+//// 内存释放
+void zfree(void *ptr) {
 #ifndef HAVE_MALLOC_SIZE
     void *realptr;
     size_t oldsize;
@@ -174,25 +178,33 @@ void zfree(void *ptr) {// 与内存申请函数调用malloc一样，内存释放
 #endif
 }
 
+
+//// 字符串复制方法 - 原始字符串的处理（没有二进制安全）
 char *zstrdup(const char *s) {
-    size_t l = strlen(s)+1;
-    char *p = zmalloc(l);       // 开辟一段新内存
+    size_t l = strlen(s)+1;     // +1 是为了'\0'准备的
+    char *p = zmalloc(l);       // 新开辟一段新内存
 
     memcpy(p,s,l);              // 调用字符串复制函数
     return p;
 }
 
-void zlibc_free(void *ptr) {// 原始系统free释放方法
+
+//// 原始系统free释放方法，没有经过内存统计的流程
+void zlibc_free(void *ptr) {
     free(ptr);
 }
 
-size_t zmalloc_used_memory(void) {//获取当前占用的内存空间大小
+
+//// 获取当前占用的内存空间大小，获取的是全局变量used_memory的大小
+size_t zmalloc_used_memory(void) {
     size_t um;
     atomicGet(used_memory,um);
     return um;
 }
 
-void zmalloc_set_oom_handler(void (*oom_handler)(size_t)) {//设置异常处理函数
+
+//// 设置异常处理函数
+void zmalloc_set_oom_handler(void (*oom_handler)(size_t)) {
     zmalloc_oom_handler = oom_handler;
 }
 

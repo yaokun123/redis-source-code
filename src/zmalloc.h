@@ -50,7 +50,7 @@ void zfree(void *ptr);                                      // 调用zfree释放
 
 char *zstrdup(const char *s);                               // 字符串复制方法
 size_t zmalloc_used_memory(void);                           // 获取当前占用的内存空间大小
-void zmalloc_set_oom_handler(void (*oom_handler)(size_t));  // 可自定义设置内存
+void zmalloc_set_oom_handler(void (*oom_handler)(size_t));  // 可自定义设置内存异常处理函数
 float zmalloc_get_fragmentation_ratio(size_t rss);          // 获取所给内存和已使用内存的大小之比
 size_t zmalloc_get_rss(void);                               // 获取RSS信息（Resident Set Size）
 size_t zmalloc_get_private_dirty(long pid);                 // 获取实际内存大小
