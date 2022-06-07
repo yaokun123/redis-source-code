@@ -56,7 +56,7 @@ typedef struct dict {
 typedef struct dictIterator {
     dict *d;                            // 字典
     long index;
-    int table, safe;                    // tableb 表示ht[0]/ht[1]
+    int table, safe;                    // table 表示ht[0]/ht[1]
     dictEntry *entry, *nextEntry;
     long long fingerprint;
 } dictIterator;

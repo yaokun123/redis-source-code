@@ -54,7 +54,7 @@ uint64_t dictGenCaseHashFunction(const unsigned char *buf, int len) {
 
 /* ----------------------------- API implementation ------------------------- */
 
-// 重置哈希表
+//// 重置哈希表
 static void _dictReset(dictht *ht)
 {
     ht->table = NULL;
@@ -63,7 +63,7 @@ static void _dictReset(dictht *ht)
     ht->used = 0;
 }
 
-// 创建一个空字典
+//// 创建一个空字典
 dict *dictCreate(dictType *type,void *privDataPtr)
 {
     dict *d = zmalloc(sizeof(*d));
@@ -72,7 +72,7 @@ dict *dictCreate(dictType *type,void *privDataPtr)
     return d;
 }
 
-// 初始化字典
+//// 初始化字典
 int _dictInit(dict *d, dictType *type,void *privDataPtr)
 {
     // 重置两个哈希表
@@ -85,7 +85,8 @@ int _dictInit(dict *d, dictType *type,void *privDataPtr)
     return DICT_OK;
 }
 
-// 根据ht[0].used重新计算数组大小
+
+//// 字典resize
 int dictResize(dict *d)
 {
     int minimal;
@@ -93,7 +94,7 @@ int dictResize(dict *d)
     // 不能resize 或 正在rehash直接返回
     if (!dict_can_resize || dictIsRehashing(d)) return DICT_ERR;
 
-
+    // 根据ht[0].used重新计算数组大小
     minimal = d->ht[0].used;                // 元素个数
     if (minimal < DICT_HT_INITIAL_SIZE)     // 如果元素个数小于4，最小size就按照4来算
         minimal = DICT_HT_INITIAL_SIZE;
