@@ -256,7 +256,7 @@ listNode *listIndex(list *list, long index) {
     return n;
 }
 
-//// 旋转函数
+//// 旋转函数，只换了表头和表尾的位置
 void listRotate(list *list) {
     listNode *tail = list->tail;
 
@@ -274,6 +274,7 @@ void listRotate(list *list) {
 }
 
 //// 合并链表，将合并到l上，清空o
+//// 注意：使用这个函数必须要保证o不为空，不然l->tail = o->tail;代码会有问题
 void listJoin(list *l, list *o) {
     if (o->head)
         o->head->prev = l->tail;
