@@ -7,7 +7,8 @@
 #include "sds.h"
 #include "sdsalloc.h"
 
-static inline int sdsHdrSize(char type) {// 根据类型获取头部大小
+//// 根据类型获取头部大小
+static inline int sdsHdrSize(char type) {
     switch(type&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
             return sizeof(struct sdshdr5);
@@ -23,7 +24,9 @@ static inline int sdsHdrSize(char type) {// 根据类型获取头部大小
     return 0;
 }
 
-static inline char sdsReqType(size_t string_size) {//根据长度大小，获取type以设置flag
+
+//// 根据长度大小，获取对应的type以设置flag
+static inline char sdsReqType(size_t string_size) {
     if (string_size < 1<<5)
         return SDS_TYPE_5;
     if (string_size < 1<<8)
@@ -37,10 +40,11 @@ static inline char sdsReqType(size_t string_size) {//根据长度大小，获取
     return SDS_TYPE_64;
 }
 
+
 //// 创建一个新的字符串
 sds sdsnewlen(const void *init, size_t initlen) {
-    void *sh;
-    sds s;
+    void *sh;                                                           // sh指向了字符串的头部，而不是指向字符串
+    sds s;                                                              // s指向了字符串
     char type = sdsReqType(initlen);                                    // 根据长度大小获取sds的类型，用来设置flag
     /* Empty strings are usually created in order to append. Use type 8
      * since type 5 is not good at this. */
@@ -48,13 +52,18 @@ sds sdsnewlen(const void *init, size_t initlen) {
     int hdrlen = sdsHdrSize(type);                                      // 根据type获取头部大小
     unsigned char *fp; /* flags pointer. */                             // flags字段的指针
 
-    sh = s_malloc(hdrlen+initlen+1);                                    //zmalloc，+1代表字符串结束符
+    //// sh指向了字符串的头部
+    sh = s_malloc(hdrlen+initlen+1);                                    // zmalloc，+1代表字符串结束符
     if (!init)
-        memset(sh, 0, hdrlen+initlen+1);
+        memset(sh, 0, hdrlen+initlen+1);                                // 如果字符串不需要初始化，则内存全部置为0
     if (sh == NULL) return NULL;
+
+    //// s指向了字符串
     s = (char*)sh+hdrlen;                                               // s为数据部分的起始指针
     fp = ((unsigned char*)s)-1;                                         // 得到flags的指针
-    switch(type) {                                                      // 根据字符串类型来设定header中的字段
+
+    //// 根据字符串类型来设定header中的字段，初次设置alloc和len都是initlen
+    switch(type) {
         case SDS_TYPE_5: {
             *fp = type | (initlen << SDS_TYPE_BITS);
             break;
@@ -88,6 +97,8 @@ sds sdsnewlen(const void *init, size_t initlen) {
             break;
         }
     }
+
+    //// 如果字符串需要赋值
     if (initlen && init)
         memcpy(s, init, initlen);                                   // 拷贝数据部分
     s[initlen] = '\0';                                              // 与C字符串兼容
@@ -96,17 +107,20 @@ sds sdsnewlen(const void *init, size_t initlen) {
 
 /* Create an empty (zero length) sds string. Even in this case the string
  * always has an implicit null term. */
+//// 创建一个空的字符串，长度为0
 sds sdsempty(void) {
     return sdsnewlen("",0);
 }
 
 /* Create a new sds string starting from a null terminated C string. */
+//// 创建一个新的字符串，如果不指定赋值，就相当于创建了一个长度为0的字符串
 sds sdsnew(const char *init) {
     size_t initlen = (init == NULL) ? 0 : strlen(init);
     return sdsnewlen(init, initlen);
 }
 
 /* Duplicate an sds string. */
+//// 字符串的复制，根据旧字符串，创建一个新的字符串
 sds sdsdup(const sds s) {
     return sdsnewlen(s, sdslen(s));
 }
@@ -114,41 +128,26 @@ sds sdsdup(const sds s) {
 //// 释放字符串
 void sdsfree(sds s) {
     if (s == NULL) return;
-    s_free((char*)s-sdsHdrSize(s[-1]));         // zfree，得到内存的真正其实位置，然后释放内存
+    s_free((char*)s-sdsHdrSize(s[-1]));         // zfree，释放的时候要找到字符串的头部指针位置
 }
 
-/* Set the sds string length to the length as obtained with strlen(), so
- * considering as content only up to the first null term character.
- *
- * This function is useful when the sds string is hacked manually in some
- * way, like in the following example:
- *
- * s = sdsnew("foobar");
- * s[2] = '\0';
- * sdsupdatelen(s);
- * printf("%d\n", sdslen(s));
- *
- * The output will be "2", but if we comment out the call to sdsupdatelen()
- * the output will be "6" as the string was modified but the logical length
- * remains 6 bytes. */
+//// 重新设置字符串的长度（len）
 void sdsupdatelen(sds s) {
     int reallen = strlen(s);
     sdssetlen(s, reallen);
 }
 
-/* Modify an sds string in-place to make it empty (zero length).
- * However all the existing buffer is not discarded but set as free space
- * so that next append operations will not require allocations up to the
- * number of bytes previously available. */
+//// 清空一个字符串，len和alloc不变
 void sdsclear(sds s) {
     sdssetlen(s, 0);
     s[0] = '\0';
 }
 
 //// sds最重要的性能就是动态调整，Redis提供了扩展sds容量的函数。
+//// 在原有的字符串中取得更大的空间，并返回扩展空间后的字符串
 sds sdsMakeRoomFor(sds s, size_t addlen) {
     void *sh, *newsh;
-    size_t avail = sdsavail(s);                         // 获取sds的剩余空间（sh->alloc - sh->len）
+    size_t avail = sdsavail(s);                         // 获取sds的剩余空间（alloc-len）
     size_t len, newlen;
     char type, oldtype = s[-1] & SDS_TYPE_MASK;         // 旧type
     int hdrlen;
@@ -159,6 +158,8 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     len = sdslen(s);                                    // sh->len
     sh = (char*)s-sdsHdrSize(oldtype);                  // 获取到header指针
     newlen = (len+addlen);                              // 新字符串的长度
+
+    //// 可以看出这里申请的长度是有富余的，避免频繁扩展
     if (newlen < SDS_MAX_PREALLOC)                      // 1024*1024
         newlen *= 2;                                    // 小于1M，申请的内存是新字符串长度的2倍
     else
@@ -187,7 +188,8 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     return s;
 }
 
-//// Redis还提供了回收sds空余空间的函数
+
+//// Redis还提供了回收sds空余空间的函数，调用后len==alloc
 // 用来回收sds空余空间，压缩内存，函数调用后，s会无效
 // 实际上，就是重新分配一块内存，将原有数据拷贝到新内存上，并释放原有空间
 // 新内存的大小比原来小了alloc-len大小
