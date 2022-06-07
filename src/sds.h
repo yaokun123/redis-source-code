@@ -7,10 +7,17 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-typedef char *sds;//这不就是char*嘛？的确，Redis采用一整段连续的内存来存储sds结构，char*类型正好可以和传统的C语言字符串类型兼容。但是，sds和char*并不等同，sds是二进制安全的，它可以存储任意二进制数据，不能像C语言字符串那样以‘\0’来标识字符串结束，因此它必然存在一个长度字段
-//sds结构一共有五种Header定义，其目的是为了满足不同长度的字符串可以使用不同大小的Header，从而节省内存。
-//在这里解释一下attribute ((packed))的用意：加上此字段是为了让编译器以紧凑模式来分配内存。如果没有这个字段，编译器会按照struct中的字段进行内存对齐，这样的话就不能保证header和sds的数据部分紧紧的相邻了，也不能按照固定的偏移来获取flags字段。
+//// 这不就是char*嘛？的确，Redis采用一整段连续的内存来存储sds结构，char*类型正好可以和传统的C语言字符串类型兼容。
+//// 但是，sds和char*并不等同，sds是二进制安全的，它可以存储任意二进制数据，不能像C语言字符串那样以‘\0’来标识字符串结束，因此它必然存在一个长度字段
+typedef char *sds;
 
+
+//// sds结构一共有五种Header定义，其目的是为了满足不同长度的字符串可以使用不同大小的Header，从而节省内存。
+//// 在这里解释一下attribute ((packed))的用意：加上此字段是为了让编译器以紧凑模式来分配内存。
+//// 如果没有这个字段，编译器会按照struct中的字段进行内存对齐，这样的话就不能保证header和sds的数据部分紧紧的相邻了，也不能按照固定的偏移来获取flags字段。
+//// len：表示字符串真正的长度，不包含空终止字符
+//// alloc：表示字符串的最大容量，不包含Header和最后的空终止字符
+//// flags：表示header的类型
 /* Note: sdshdr5 is never used, we just access the flags byte directly.
  * However is here to document the layout of type 5 SDS strings. */
 struct __attribute__ ((__packed__)) sdshdr5 {
@@ -18,45 +25,53 @@ struct __attribute__ ((__packed__)) sdshdr5 {
     char buf[];
 };
 struct __attribute__ ((__packed__)) sdshdr8 {
-    uint8_t len; /* used */                                             //256
+    uint8_t len; /* used */                                             // 256
     uint8_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
 struct __attribute__ ((__packed__)) sdshdr16 {
-    uint16_t len; /* used */                                            //65536
+    uint16_t len; /* used */                                            // 65536
     uint16_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
 struct __attribute__ ((__packed__)) sdshdr32 {
-    uint32_t len; /* used */                                            //4294967296
+    uint32_t len; /* used */                                            // 4294967296
     uint32_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
 struct __attribute__ ((__packed__)) sdshdr64 {
-    uint64_t len; /* used */                                            //....
+    uint64_t len; /* used */                                            // ....
     uint64_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
 
+
+//// 五种header类型，flags取值为0~4
 #define SDS_TYPE_5  0
 #define SDS_TYPE_8  1
 #define SDS_TYPE_16 2
 #define SDS_TYPE_32 3
 #define SDS_TYPE_64 4
 
-//Redis定义了如下几个宏定义来操作header
+
+//// Redis定义了如下几个宏定义来操作header
 #define SDS_TYPE_MASK 7                     // 类型掩码
 #define SDS_TYPE_BITS 3                     // 前一个字节为flag,flag中前3个字节代表header的类型
 #define SDS_HDR_VAR(T,s) struct sdshdr##T *sh = (void*)((s)-(sizeof(struct sdshdr##T)));// 获取header头指针
 #define SDS_HDR(T,s) ((struct sdshdr##T *)((s)-(sizeof(struct sdshdr##T))))             // 获取header头指针
 #define SDS_TYPE_5_LEN(f) ((f)>>SDS_TYPE_BITS)                                          // 获取sdshdr5的长度
 
+
+//// 根据字符串地址，获取字符串长度
 static inline size_t sdslen(const sds s) {
-    unsigned char flags = s[-1];
+    unsigned char flags = s[-1];            // 字符串地址向前偏移一个字节，取出flags
+
+    // flags的低3位代表type，高5位没使用。Lower Side Band
+    // 00000111
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
             return SDS_TYPE_5_LEN(flags);
