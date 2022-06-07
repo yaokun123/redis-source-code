@@ -63,6 +63,7 @@ sds sdsnewlen(const void *init, size_t initlen) {
     fp = ((unsigned char*)s)-1;                                         // 得到flags的指针
 
     //// 根据字符串类型来设定header中的字段，初次设置alloc和len都是initlen
+    //// 可以看出初次创建字符串的时候是没有给富余空间的。此时len==alloc
     switch(type) {
         case SDS_TYPE_5: {
             *fp = type | (initlen << SDS_TYPE_BITS);
