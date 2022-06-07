@@ -128,8 +128,7 @@ int dictExpand(dict *d, unsigned long size)
     d->rehashidx = 0;           // 设置rehash的索引
     return DICT_OK;
 }
-
-//rehash
+//// 渐进式rehash
 // 执行N步渐进式的rehash操作，如果仍存在旧表中的数据迁移到新表，则返回1，反之返回0
 // 每一步操作移动一个索引值下的键值对到新表
 int dictRehash(dict *d, int n) {
@@ -243,7 +242,7 @@ dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
     return entry;
 }
 
-//// 上述添加方式在，在存在该key的时候，直接返回NULL，Redis还提供了另一种添加键值对的函数，
+//// 上述添加方式dictAdd，在存在该key的时候，直接返回NULL，Redis还提供了另一种添加键值对的函数，
 //// 它在处理存在相同key的情况时，直接用新键值对来替换旧键值对。
 int dictReplace(dict *d, void *key, void *val)
 {
@@ -498,7 +497,7 @@ dictEntry *dictGetRandomKey(dict *d)
     if (dictSize(d) == 0) return NULL;                                  // 哈希表为空，直接返回NULL
     if (dictIsRehashing(d)) _dictRehashStep(d);                         // 如果正在进行rehash，则执行一次rehash操作
 
-    // 随机返回一个键的具体操作是：先随机选取一个索引值，然后在该索引值
+    // 随机返回一个键的具体操作是：先随机选取一个索引值，然后再取该索引值
     // 对应的键值对链表中随机选取一个键值对返回
     if (dictIsRehashing(d)) {                                           // 如果在进行rehash，则需要考虑两个哈希表中的数据
         do {
@@ -693,7 +692,7 @@ unsigned long dictScan(dict *d,
 
 /* ------------------------- private functions ------------------------------ */
 
-//判断是否需要扩容
+//// 判断是否需要扩容
 static int _dictExpandIfNeeded(dict *d)
 {
     if (dictIsRehashing(d)) return DICT_OK;                             // 正在rehash不扩容
