@@ -730,7 +730,7 @@ unsigned long dictScan(dict *d,
     // ~ 按位取反
     // & 按位与
     // | 按位或
-    v |= ~m0;
+    v |= ~m0;      //// 计算游标按照小的size来
 
     v = rev(v); // 反转v
     v++;        // v+1
