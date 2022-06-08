@@ -110,7 +110,10 @@ int dictResize(dict *d)
     return dictExpand(d, minimal);
 }
 
-//// 扩容 或 新建hash table
+
+//// 创建一个新的哈希表，并根据字典的情况，选择以下其中一个动作来进行：
+//// 1) 如果字典的 0 号哈希表为空，那么将新哈希表设置为 0 号哈希表
+//// 2) 如果字典的 0 号哈希表非空，那么将新哈希表设置为 1 号哈希表，并打开字典的 rehash 标识，使得程序可以开始对字典进行 rehash
 int dictExpand(dict *d, unsigned long size)
 {
     dictht n;
