@@ -91,7 +91,7 @@ int dictResize(dict *d)
 {
     int minimal;
 
-    // 不能resize 或 正在rehash直接返回，dict_can_resize为全局变量
+    // 不能resize 或 正在rehash直接返回，dict_can_resize为全局变量，有fork进程时候会设置为0，优化写时拷贝
     if (!dict_can_resize || dictIsRehashing(d)) return DICT_ERR;
 
     // 根据ht[0].used（哈希表中节点个数）重新计算数组大小
