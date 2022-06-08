@@ -81,13 +81,16 @@ dict *dictCreate(dictType *type,void *privDataPtr)
 //// 初始化字典
 int _dictInit(dict *d, dictType *type,void *privDataPtr)
 {
-    // 重置两个哈希表
+    // 初始化两个哈希表的各项属性值
+    // 但暂时还不分配内存给哈希表数组
     _dictReset(&d->ht[0]);
     _dictReset(&d->ht[1]);
-    d->type = type;                 // 设定字典类型
+
+
+    d->type = type;                 // 设置类型特定函数
     d->privdata = privDataPtr;
-    d->rehashidx = -1;              // 初始化为-1，未进行rehash操作
-    d->iterators = 0;               // 正在使用的迭代器数量
+    d->rehashidx = -1;              // 设置哈希表 rehash 状态。-1，代表没有在rehash
+    d->iterators = 0;               // 设置字典的安全迭代器数量
     return DICT_OK;
 }
 
