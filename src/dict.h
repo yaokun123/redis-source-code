@@ -53,11 +53,26 @@ typedef struct dict {
 
 
 //// 字典迭代器
+/***
+ * 如果 safe 属性的值为 1 ，那么在迭代进行的过程中，程序仍然可以执行 dictAdd 、 dictFind 和其他函数，对字典进行修改。
+ * 如果 safe 不为 1 ，那么程序只会调用 dictNext 对字典进行迭代，而不对字典进行修改。
+ */
 typedef struct dictIterator {
-    dict *d;                            // 字典
-    long index;
-    int table, safe;                    // table 表示ht[0]/ht[1]
+    dict *d;                            // 被迭代的字典
+    long index;                         // index ：迭代器当前所指向的哈希表索引位置。
+    int table, safe;                    // table ：正在被迭代的哈希表号码，值可以是 0 或 1 。
+                                        // safe ：标识这个迭代器是否安全
+
+    // entry ：当前迭代到的节点的指针
+    // nextEntry ：当前迭代节点的下一个节点
+    //             因为在安全迭代器运作时， entry 所指向的节点可能会被修改，
+    //             所以需要一个额外的指针来保存下一节点的位置，
+    //             从而防止指针丢失
     dictEntry *entry, *nextEntry;
+
+    // 指纹，指纹是代表字典在给定时间下的状态的一个64位的数，它通过字典的几个属性的异或可以得到。
+    // 当我们初始化一个不安全的迭代器时，就会得到字典的指纹，当迭代器释放时，我们会再次检查指纹。
+    // 如果两次的指纹不一致，那么意味着不安全迭代器的调用者在迭代过程中对字典进行了非法的调用，报错。
     long long fingerprint;
 } dictIterator;
 
