@@ -453,32 +453,50 @@ dictIterator *dictGetSafeIterator(dict *d) {
     return i;
 }
 
-//// 根据迭代器获取一个节点
+//// 返回迭代器指向的当前节点，字典迭代完毕时，返回 NULL
 dictEntry *dictNext(dictIterator *iter)
 {
     while (1) {
-        if (iter->entry == NULL) {                                  // 入口节点为空
-            dictht *ht = &iter->d->ht[iter->table];                 // 获取hashtable地址
-            if (iter->index == -1 && iter->table == 0) {
-                if (iter->safe)
+        // 进入这个循环有两种可能：
+        // 1) 这是迭代器第一次运行
+        // 2) 当前索引链表中的节点已经迭代完（NULL 为链表的表尾）
+        if (iter->entry == NULL) {
+            dictht *ht = &iter->d->ht[iter->table];                 // 指向被迭代的哈希表
+            if (iter->index == -1 && iter->table == 0) {            // 初次迭代时执行
+                if (iter->safe)                                     // 如果是安全迭代器，那么更新安全迭代器计数器
                     iter->d->iterators++;
                 else
-                    iter->fingerprint = dictFingerprint(iter->d);
+                    iter->fingerprint = dictFingerprint(iter->d);   // 如果是不安全迭代器，那么计算指纹
             }
-            iter->index++;
+            iter->index++;                                          // 更新索引
+
+
+            // 如果迭代器的当前索引大于当前被迭代的哈希表的大小
+            // 那么说明这个哈希表已经迭代完毕
             if (iter->index >= (long) ht->size) {
+                // 如果正在 rehash 的话，那么说明 1 号哈希表也正在使用中
+                // 那么继续对 1 号哈希表进行迭代
                 if (dictIsRehashing(iter->d) && iter->table == 0) {
                     iter->table++;
                     iter->index = 0;
                     ht = &iter->d->ht[1];
-                } else {
+                } else {                                            // 如果没有 rehash ，那么说明迭代已经完成
                     break;
                 }
             }
+
+            // 如果进行到这里，说明这个哈希表并未迭代完
+            // 更新节点指针，指向下个索引链表的表头节点
             iter->entry = ht->table[iter->index];
         } else {
+            // 执行到这里，说明程序正在迭代某个链表
+            // 将节点指针指向链表的下个节点
             iter->entry = iter->nextEntry;
         }
+
+
+        // 如果当前节点不为空，那么也记录下该节点的下个节点
+        // 因为安全迭代器有可能会将迭代器返回的当前节点删除
         if (iter->entry) {
             /* We need to save the 'next' here, the iterator user
              * may delete the entry we are returning. */
@@ -486,6 +504,8 @@ dictEntry *dictNext(dictIterator *iter)
             return iter->entry;
         }
     }
+
+    // 迭代完毕
     return NULL;
 }
 
