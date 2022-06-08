@@ -60,7 +60,7 @@ uint64_t dictGenCaseHashFunction(const unsigned char *buf, int len) {
 
 /* ----------------------------- API implementation ------------------------- */
 
-//// 重置哈希表
+//// 重置（或初始化）给定哈希表的各项属性值
 static void _dictReset(dictht *ht)
 {
     ht->table = NULL;
@@ -69,7 +69,7 @@ static void _dictReset(dictht *ht)
     ht->used = 0;
 }
 
-//// 创建一个空字典
+//// 创建一个新的字典
 dict *dictCreate(dictType *type,void *privDataPtr)
 {
     dict *d = zmalloc(sizeof(*d));
@@ -81,14 +81,13 @@ dict *dictCreate(dictType *type,void *privDataPtr)
 //// 初始化字典
 int _dictInit(dict *d, dictType *type,void *privDataPtr)
 {
-    // 初始化两个哈希表的各项属性值
-    // 但暂时还不分配内存给哈希表数组
+    // 初始化两个哈希表的各项属性值，但暂时还不分配内存给哈希表数组
     _dictReset(&d->ht[0]);
     _dictReset(&d->ht[1]);
 
 
     d->type = type;                 // 设置类型特定函数
-    d->privdata = privDataPtr;
+    d->privdata = privDataPtr;      // 设置私有数据
     d->rehashidx = -1;              // 设置哈希表 rehash 状态。-1，代表没有在rehash
     d->iterators = 0;               // 设置字典的安全迭代器数量
     return DICT_OK;
@@ -116,8 +115,8 @@ int dictResize(dict *d)
 //// 2) 如果字典的 0 号哈希表非空，那么将新哈希表设置为 1 号哈希表，并打开字典的 rehash 标识，使得程序可以开始对字典进行 rehash
 int dictExpand(dict *d, unsigned long size)
 {
-    dictht n;
-    unsigned long realsize = _dictNextPower(size);              // 计算新的hash table数组容量，2的倍数
+    dictht n;                                                   // 新哈希表
+    unsigned long realsize = _dictNextPower(size);              // 根据 size 参数，计算哈希表的大小（2的整数倍）
 
     //// 正在rehash直接返回，或传入的size小于节点个数也返回
     if (dictIsRehashing(d) || d->ht[0].used > size)
@@ -642,7 +641,22 @@ static unsigned long rev(unsigned long v) {
     return v;
 }
 
-// 扫描dict
+/**
+ * 用于迭代给定字典中的元素
+ *
+ * 迭代按以下方式执行：
+ * 1、一开始，你使用 0 作为游标来调用函数。
+ * 2、函数执行一步迭代操作，并返回一个下次迭代时使用的新游标。
+ * 3、当函数返回的游标为 0 时，迭代完成。
+ *
+ * 函数保证，在迭代从开始到结束期间，一直存在于字典的元素肯定会被迭代到，但一个元素可能会被返回多次。
+ *
+ * 迭代所使用的算法是由 Pieter Noordhuis 设计的，算法的主要思路是在二进制高位上对游标进行加法计算
+ * 也即是说，不是按正常的办法来对游标进行加法计算，而是首先将游标的二进制位翻转（reverse）过来，
+ * 然后对翻转后的值进行加法计算，最后再次对加法计算之后的结果进行翻转。
+ *
+ * 这一策略是必要的，因为在一次完整的迭代过程中，哈希表的大小有可能在两次迭代之间发生改变。
+ */
 unsigned long dictScan(dict *d,
                        unsigned long v,
                        dictScanFunction *fn,
