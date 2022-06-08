@@ -128,6 +128,8 @@ int dictExpand(dict *d, unsigned long size)
     d->rehashidx = 0;           // 设置rehash的索引
     return DICT_OK;
 }
+
+
 //// 渐进式rehash
 // 执行N步渐进式的rehash操作，如果仍存在旧表中的数据迁移到新表，则返回1，反之返回0
 // 每一步操作移动一个索引值下的键值对到新表
@@ -209,7 +211,7 @@ static void _dictRehashStep(dict *d) {
 int dictAdd(dict *d, void *key, void *val)
 {
     // 返回的entry可能是已经存在的节点，也可能是新建的节点
-    //// 这里existing设置的是NULL，代表该方法只做新增，不做更新（如果key存在就直接返回）
+    //// 这里existing设置的是NULL，代表该方法只做新增，不做更新（如果key存在就直接返回NULL节点）
     dictEntry *entry = dictAddRaw(d,key,NULL);       // 往字典中添加一个只有key的键值对
 
     if (!entry) return DICT_ERR;                            // 如果添加失败，则返回错误
@@ -723,7 +725,7 @@ static unsigned long _dictNextPower(unsigned long size)
     }
 }
 
-//// 根据key算出index，如果存在返回-1，并设置existing为存在的节点
+//// 根据key算出index（哈希数组的索引），如果存在返回-1，并设置existing为存在的节点
 static int _dictKeyIndex(dict *d, const void *key, unsigned int hash, dictEntry **existing)
 {
     unsigned int idx, table;
