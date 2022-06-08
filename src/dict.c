@@ -688,7 +688,7 @@ unsigned long dictScan(dict *d,
         t0 = &d->ht[0];                                         // 指向两个哈希表
         t1 = &d->ht[1];
 
-        if (t0->size > t1->size) {                              // 确保 t0 比 t1 要小
+        if (t0->size > t1->size) {                              // 确保 t0 比 t1 要小（缩容）
             t0 = &d->ht[1];
             t1 = &d->ht[0];
         }
