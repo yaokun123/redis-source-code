@@ -15,7 +15,13 @@
 #else
 #include <assert.h>
 #endif
-
+/**
+ * 通过 dictEnableResize() 和 dictDisableResize() 两个函数，程序可以手动地允许或阻止哈希表进行 rehash ，
+ * 这在 Redis 使用子进程进行保存操作时，可以有效地利用 copy-on-write 机制。
+ * 需要注意的是，并非所有 rehash 都会被 dictDisableResize 阻止：如果已使用节点的数量和字典大小之间的比率，
+ * 大于字典强制 rehash 比率 dict_force_resize_ratio ，那么 rehash 仍然会（强制）进行。
+ * */
+//// 指示字典是否启用 rehash 的标识
 static int dict_can_resize = 1;
 static unsigned int dict_force_resize_ratio = 5;                // 负载因子
 
