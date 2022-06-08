@@ -669,14 +669,14 @@ unsigned long dictScan(dict *d,
 
     if (dictSize(d) == 0) return 0;                             // 字典为空，直接返回
 
-    if (!dictIsRehashing(d)) { //没有在rehash
-        t0 = &(d->ht[0]);
-        m0 = t0->sizemask;
+    if (!dictIsRehashing(d)) {                                  // 迭代只有一个哈希表的字典（没有在rehash）
+        t0 = &(d->ht[0]);                                       // 指向哈希表
+        m0 = t0->sizemask;                                      // 记录 mask
 
         /* Emit entries at cursor */
         if (bucketfn) bucketfn(privdata, &t0->table[v & m0]);
 
-        // 遍历一个哈希槽（v是传进来的 光标值）
+        // 遍历一个哈希槽的所有节点（v是传进来的 光标值）
         de = t0->table[v & m0];
         while (de) {
             next = de->next;
@@ -684,21 +684,22 @@ unsigned long dictScan(dict *d,
             de = next;
         }
 
-    } else {                    // rehash
-        t0 = &d->ht[0];
+    } else {                                                    // 迭代有两个哈希表的字典（rehash）
+        t0 = &d->ht[0];                                         // 指向两个哈希表
         t1 = &d->ht[1];
 
-        /* Make sure t0 is the smaller and t1 is the bigger table */
-        if (t0->size > t1->size) {
+        if (t0->size > t1->size) {                              // 确保 t0 比 t1 要小
             t0 = &d->ht[1];
             t1 = &d->ht[0];
         }
 
-        m0 = t0->sizemask;
+        m0 = t0->sizemask;                                      // 记录掩码
         m1 = t1->sizemask;
 
         /* Emit entries at cursor */
         if (bucketfn) bucketfn(privdata, &t0->table[v & m0]);
+
+        // 指向节点较小的桶，并迭代桶中的所有节点
         de = t0->table[v & m0];
         while (de) {
             next = de->next;
@@ -706,11 +707,11 @@ unsigned long dictScan(dict *d,
             de = next;
         }
 
-        /* Iterate over indices in larger table that are the expansion
-         * of the index pointed to by the cursor in the smaller table */
+
         do {
-            /* Emit entries at cursor */
             if (bucketfn) bucketfn(privdata, &t1->table[v & m1]);
+
+            // 迭代大表中的桶
             de = t1->table[v & m1];
             while (de) {
                 next = de->next;
