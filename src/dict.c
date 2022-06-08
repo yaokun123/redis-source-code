@@ -146,7 +146,7 @@ int dictRehash(dict *d, int n) {
         }
         de = d->ht[0].table[d->rehashidx];                          // hash槽的入口
 
-        // 循环将哈希冲突的链表上的节点取出来
+        // 循环将哈希冲突的链表上的节点全部转移走
         while(de) {                                                 // 将hash槽里所有的节点都转移到新的hash表上
             unsigned int h;
 
