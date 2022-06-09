@@ -867,14 +867,14 @@ size_t _dictGetStatsHt(char *buf, size_t bufsize, dictht *ht, int tableid) {
     for (i = 0; i < ht->size; i++) {
         dictEntry *he;
 
-        if (ht->table[i] == NULL) {                             // 哈希槽为空，clvector[0]++记录
+        if (ht->table[i] == NULL) {                             // clvector[0]记录了哈希槽为空的个数
             clvector[0]++;
             continue;
         }
-        slots++;                                                // 记录哈希槽的个数
+        slots++;                                                // 记录哈希槽不为空的个数
 
         // 遍历哈希槽里的冲突链表
-        chainlen = 0;                                           // 哈希槽中的元素个数
+        chainlen = 0;                                           // 记录当前哈希槽中的元素个数（链的长度）
         he = ht->table[i];
         while(he) {
             chainlen++;
@@ -886,19 +886,19 @@ size_t _dictGetStatsHt(char *buf, size_t bufsize, dictht *ht, int tableid) {
         clvector[(chainlen < DICT_STATS_VECTLEN) ? chainlen : (DICT_STATS_VECTLEN-1)]++;
 
 
-        if (chainlen > maxchainlen) maxchainlen = chainlen;
+        if (chainlen > maxchainlen) maxchainlen = chainlen;     // 记录链的最大长度
         totchainlen += chainlen;                                // 记录所有的元素个数
     }
 
     // 格式化输出
     l += snprintf(buf+l,bufsize-l,
         "Hash table %d stats (%s):\n"
-        " table size: %ld\n"
-        " number of elements: %ld\n"
-        " different slots: %ld\n"
-        " max chain length: %ld\n"
-        " avg chain length (counted): %.02f\n"
-        " avg chain length (computed): %.02f\n"
+        " table size: %ld\n"                                    // 哈希表的大小（哈希槽数组的大小）
+        " number of elements: %ld\n"                            // 节点个数
+        " different slots: %ld\n"                               // 使用的哈希槽
+        " max chain length: %ld\n"                              // 哈希冲突链的
+        " avg chain length (counted): %.02f\n"                  // totchainlen/slots
+        " avg chain length (computed): %.02f\n"                 // ht->used/slots
         " Chain length distribution:\n",
         tableid, (tableid == 0) ? "main hash table" : "rehashing target",
         ht->size,
@@ -923,7 +923,8 @@ size_t _dictGetStatsHt(char *buf, size_t bufsize, dictht *ht, int tableid) {
     return strlen(buf);
 }
 
-// 获取dict状态
+//// 获取dict状态，如果在进行rehash，则会打印两个哈希表的状态
+//// 需要遍历所有哈希槽的所有冲突链，是一个耗时的操作，谨慎使用！！！！
 void dictGetStats(char *buf, size_t bufsize, dict *d) {
     size_t l;
     char *orig_buf = buf;
