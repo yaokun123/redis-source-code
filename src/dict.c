@@ -925,6 +925,7 @@ size_t _dictGetStatsHt(char *buf, size_t bufsize, dictht *ht, int tableid) {
 
 //// 获取dict状态，如果在进行rehash，则会打印两个哈希表的状态
 //// 需要遍历所有哈希槽的所有冲突链，是一个耗时的操作，谨慎使用！！！！
+//// 只在debug htstats <dbid>里使用过。也就是说只能查看每个db使用的字典状态，其他使用字典的情况打印不出来
 void dictGetStats(char *buf, size_t bufsize, dict *d) {
     size_t l;
     char *orig_buf = buf;
