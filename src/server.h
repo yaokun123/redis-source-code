@@ -1882,6 +1882,7 @@ void persistCommand(client *c);
 void slaveofCommand(client *c);
 void roleCommand(client *c);
 void debugCommand(client *c);
+void debugCommand2(client *c);
 void msetCommand(client *c);
 void msetnxCommand(client *c);
 void zaddCommand(client *c);

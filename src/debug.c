@@ -260,6 +260,24 @@ void computeDatasetDigest(unsigned char *final) {
         dictReleaseIterator(di);
     }
 }
+void debugCommand2(client *c){
+    if (c->argc != 2) {
+        addReplyError(c,"请输入哈希表的地址");
+        return;
+    }
+
+    char *addr = (char *)c->argv[1]->ptr;
+
+    char buf[4096];
+    sds stats = sdsempty();
+
+    stats = sdscatprintf(stats,"[Dictionary HT]\n");
+    //dictGetStats(buf,sizeof(buf),(dict *)*addr);
+    stats = sdscat(stats,buf);
+
+
+    addReplyBulkSds(c,stats);
+}
 
 void debugCommand(client *c) {
     if (c->argc == 1) {
