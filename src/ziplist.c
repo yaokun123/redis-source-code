@@ -71,16 +71,16 @@
 //// 节点的数据结构定义
 // 很显然，内存上不能直接存放结构体，于是，Redis提供了一系列的编码和解码操作函数。这里以编码前置节点长度和解码前置节点长度
 typedef struct zlentry {
-    unsigned int prevrawlensize; // 前置节点长度和编码所需长度
-    unsigned int prevrawlen;
+    unsigned int prevrawlensize;    // 编码 prevrawlen 所需的字节大小
+    unsigned int prevrawlen;        // 前置节点的长度，根据该字段值就可以从后向前遍历ziplist
 
-    unsigned int lensize;        // 当前节点长度和编码所需长度
-    unsigned int len;
+    unsigned int lensize;           // 编码 len 所需的字节大小
+    unsigned int len;               // 当前节点值的长度
 
-    unsigned int headersize;     // 头的大小（ prevrawlensize + lensize. ）
+    unsigned int headersize;        // 当前节点 header 的大小(prevrawlensize+lensize)
 
-    unsigned char encoding;      // 编码类型
-    unsigned char *p;            // 数据部分
+    unsigned char encoding;         // 当前节点值所使用的编码类型
+    unsigned char *p;               // 指向当前节点的指针
 } zlentry;
 
 #define ZIPLIST_ENTRY_ZERO(zle) { \
