@@ -47,30 +47,15 @@
 #define ZIP_IS_STR(enc) (((enc) & ZIP_STR_MASK) < ZIP_STR_MASK)
 
 /* Utility macros.*/
-
-// 返回ziplist整体长度
-#define ZIPLIST_BYTES(zl)       (*((uint32_t*)(zl)))
-
-// 取出头尾偏移
-#define ZIPLIST_TAIL_OFFSET(zl) (*((uint32_t*)((zl)+sizeof(uint32_t))))
-
-// 取出zipliest中节点个数
-#define ZIPLIST_LENGTH(zl)      (*((uint16_t*)((zl)+sizeof(uint32_t)*2)))
-
-// ziplist头长度
-#define ZIPLIST_HEADER_SIZE     (sizeof(uint32_t)*2+sizeof(uint16_t))
-
-// ziplist尾长度
-#define ZIPLIST_END_SIZE        (sizeof(uint8_t))
-
-// 返回ziplist跳过头信息的第一个节点位置
-#define ZIPLIST_ENTRY_HEAD(zl)  ((zl)+ZIPLIST_HEADER_SIZE)
-
-// 返回ziplist最后一个节点位置
-#define ZIPLIST_ENTRY_TAIL(zl)  ((zl)+intrev32ifbe(ZIPLIST_TAIL_OFFSET(zl)))
-
-// 返回ziplist尾部位置
-#define ZIPLIST_ENTRY_END(zl)   ((zl)+intrev32ifbe(ZIPLIST_BYTES(zl))-1)
+//// 定义了一系列的宏，可以分别获取ziplist中存储的各个属性
+#define ZIPLIST_BYTES(zl)       (*((uint32_t*)(zl)))                            // 返回ziplist占有的内存字节数【zlbytes】
+#define ZIPLIST_TAIL_OFFSET(zl) (*((uint32_t*)((zl)+sizeof(uint32_t))))         // 取出最后一个entry的偏移量  【zltail】
+#define ZIPLIST_LENGTH(zl)      (*((uint16_t*)((zl)+sizeof(uint32_t)*2)))       // 取出zipliest中节点个数    【zllen】65535就不准了
+#define ZIPLIST_HEADER_SIZE     (sizeof(uint32_t)*2+sizeof(uint16_t))           // ziplist头长度
+#define ZIPLIST_END_SIZE        (sizeof(uint8_t))                               // ziplist尾长度
+#define ZIPLIST_ENTRY_HEAD(zl)  ((zl)+ZIPLIST_HEADER_SIZE)                      // 返回ziplist第一个节点位置
+#define ZIPLIST_ENTRY_TAIL(zl)  ((zl)+intrev32ifbe(ZIPLIST_TAIL_OFFSET(zl)))    // 返回ziplist最后一个节点位置
+#define ZIPLIST_ENTRY_END(zl)   ((zl)+intrev32ifbe(ZIPLIST_BYTES(zl))-1)        // 返回ziplist尾部位置
 
 /* Increment the number of items field in the ziplist header. Note that this
  * macro should never overflow the unsigned 16 bit integer, since entires are
