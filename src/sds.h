@@ -60,8 +60,8 @@ struct __attribute__ ((__packed__)) sdshdr64 {
 
 //// Redis定义了如下几个宏定义来操作header
 #define SDS_TYPE_MASK 7                     // 类型掩码
-#define SDS_TYPE_BITS 3                     // 前一个字节为flag,flag中前3个字节代表header的类型
-#define SDS_HDR_VAR(T,s) struct sdshdr##T *sh = (void*)((s)-(sizeof(struct sdshdr##T)));// 获取header头指针
+#define SDS_TYPE_BITS 3                     // 前一个字节为flag,flag中低3位代表header的类型
+#define SDS_HDR_VAR(T,s) struct sdshdr##T *sh = (void*)((s)-(sizeof(struct sdshdr##T)));// 获取header头指针，并用*sh变量接收
 #define SDS_HDR(T,s) ((struct sdshdr##T *)((s)-(sizeof(struct sdshdr##T))))             // 获取header头指针
 #define SDS_TYPE_5_LEN(f) ((f)>>SDS_TYPE_BITS)                                          // 获取sdshdr5的长度
 
