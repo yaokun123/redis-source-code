@@ -9,11 +9,13 @@
 
 /* Note that these encodings are ordered, so:
  * INTSET_ENC_INT16 < INTSET_ENC_INT32 < INTSET_ENC_INT64. */
+//// intset整数的三种编码模式
 #define INTSET_ENC_INT16 (sizeof(int16_t))
 #define INTSET_ENC_INT32 (sizeof(int32_t))
 #define INTSET_ENC_INT64 (sizeof(int64_t))
 
 /* Return the required encoding for the provided value. */
+//// 根据value大小获取encoding类型
 static uint8_t _intsetValueEncoding(int64_t v) {
     if (v < INT32_MIN || v > INT32_MAX)
         return INTSET_ENC_INT64;
@@ -23,7 +25,7 @@ static uint8_t _intsetValueEncoding(int64_t v) {
         return INTSET_ENC_INT16;
 }
 
-// 获取整数集is中，按照enc编码格式的第pos位上的元素
+//// 获取整数集is中，按照enc编码格式的第pos位上的元素
 static int64_t _intsetGetEncoded(intset *is, int pos, uint8_t enc) {
     int64_t v64;
     int32_t v32;
@@ -66,15 +68,16 @@ static void _intsetSet(intset *is, int pos, int64_t value) {
     }
 }
 
-//创建intset
+//// 创建intset
 intset *intsetNew(void) {
     intset *is = zmalloc(sizeof(intset));
-    is->encoding = intrev32ifbe(INTSET_ENC_INT16);      //Redis在创建intset集合时，默认采用int16_t编码格式。
+    is->encoding = intrev32ifbe(INTSET_ENC_INT16);      // Redis在创建intset集合时，默认采用int16_t编码格式。
     is->length = 0;
     return is;
 }
 
 /* Resize the intset */
+//// 扩容intset
 static intset *intsetResize(intset *is, uint32_t len) {
     uint32_t size = len*intrev32ifbe(is->encoding);
     is = zrealloc(is,sizeof(intset)+size);
@@ -121,20 +124,22 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
     }
 }
 
-// 升级整数集合并添加元素
+
+//// 将一个新元素添加到intset，且新元素的类型比整数集合现有所有元素的类型都要大时，整数集合需要先进行升级，然后才能将新元素添加到整数集合里面。
+//// 注意，intset不支持降级操作，一旦对intset进行了升级，编码就会一直保持升级后的状态
 static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
-    uint8_t curenc = intrev32ifbe(is->encoding);          // 获取当前编码格式
-    uint8_t newenc = _intsetValueEncoding(value);           // 获取需要升级到的编码格式
-    int length = intrev32ifbe(is->length);               // 获取原整数集中的整数个数
+    uint8_t curenc = intrev32ifbe(is->encoding);                // 获取当前编码格式
+    uint8_t newenc = _intsetValueEncoding(value);                 // 获取需要升级到的编码格式
+    int length = intrev32ifbe(is->length);                     // 获取原整数集中的整数个数
 
     // 由于待添加的元素一定是大于或者小于整数集中所有元素，故此处需要判断添加到新数据集的头部或者尾部
     // 如果value为正，则添加到新数据集的尾部；反之则添加到首部
     int prepend = value < 0 ? 1 : 0;
 
     is->encoding = intrev32ifbe(newenc);                        // 设定新的编码格式
-    is = intsetResize(is,intrev32ifbe(is->length)+1);   // 对原数据集进行扩容
+    is = intsetResize(is,intrev32ifbe(is->length)+1);    // 对原数据集进行扩容
 
-    // 采用从后往前的重编码顺序，这样就避免覆盖数据了。
+    //// 采用从后往前的重编码顺序，这样就避免覆盖数据了。
     while(length--)
         _intsetSet(is,length+prepend,_intsetGetEncoded(is,length,curenc));
 
@@ -173,16 +178,18 @@ static void intsetMoveTail(intset *is, uint32_t from, uint32_t to) {
     memmove(dst,src,bytes);
 }
 
-// 向整数集合中添加元素
+//// 向整数集合中添加元素
+//// 每次添加元素的时候都要调整intset的大小，效率不高，这就决定intset中存放的元素不能太多
 intset *intsetAdd(intset *is, int64_t value, uint8_t *success) {
     uint8_t valenc = _intsetValueEncoding(value);
     uint32_t pos;
     if (success) *success = 1;
 
-    // 如果超出了当前编码格式所能表示的范围，则升级整数集合并添加元素
+    //// 如果超出了当前编码格式所能表示的范围，则升级整数集合并添加元素
     if (valenc > intrev32ifbe(is->encoding)) {
         return intsetUpgradeAndAdd(is,value);
-    } else {// 如果没有超出，则计算待添加整数需要应添加到整数集合中的位置
+    } else {
+        //// 如果没有超出，则计算待添加整数需要应添加到整数集合中的位置
         if (intsetSearch(is,value,&pos)) {// intset中应不存在相同元素，如果待添加的整数已存在，则直接返回
             if (success) *success = 0;
             return is;
