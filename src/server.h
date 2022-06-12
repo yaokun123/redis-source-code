@@ -733,16 +733,20 @@ struct sharedObjectsStruct {
 };
 
 /* ZSETs use a specialized version of Skiplists */
+//// 跳跃表节点
 typedef struct zskiplistNode {
+    //// 3.x版本这里存的是 robj *obj;
+    //// 4.x版本直接改为sds结构
     sds ele;                                    // 成员对象
-    double score;                               // 分值
-    struct zskiplistNode *backward;             // 向前指针
-    struct zskiplistLevel {                     // 层
-        struct zskiplistNode *forward;          // 向后指针
+    double score;                               // 表示该节点的分值，跳跃表按照分值大小进行顺序排列
+    struct zskiplistNode *backward;             // 后退指针
+    struct zskiplistLevel {                     // 层。这个属性至关重要，是跳跃表的核心所在，初始化一个跳跃表节点的时候会为其随机生成一个层大小，每个节点的每一层以链表的形式连接起来。
+        struct zskiplistNode *forward;          // 前进指针
         unsigned int span;                      // 跨度
     } level[];
 } zskiplistNode;
 
+//// 跳跃表
 typedef struct zskiplist {
     struct zskiplistNode *header, *tail;        // 跳跃表的表头节点和表尾节点
     unsigned long length;                       // 表中节点的数量
