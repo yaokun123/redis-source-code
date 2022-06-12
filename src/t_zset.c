@@ -8,25 +8,27 @@
 int zslLexValueGteMin(sds value, zlexrangespec *spec);
 int zslLexValueLteMax(sds value, zlexrangespec *spec);
 
-// 创建一个跳表节点
+//// 创建一个跳表节点
 zskiplistNode *zslCreateNode(int level, double score, sds ele) {
-    zskiplistNode *zn =
-        zmalloc(sizeof(*zn)+level*sizeof(struct zskiplistLevel));
+    zskiplistNode *zn = zmalloc(sizeof(*zn)+level*sizeof(struct zskiplistLevel));
     zn->score = score;      // 设定分值
     zn->ele = ele;          // 设定成员对象
     return zn;
 }
 
-// 创建跳跃表
+
+//// 创建跳跃表
 zskiplist *zslCreate(void) {
     int j;
     zskiplist *zsl;
 
-    zsl = zmalloc(sizeof(*zsl));                                        // 申请内存
-    zsl->level = 1;                                                     // 设定其level为1
+    zsl = zmalloc(sizeof(*zsl));                                        // 申请内存,创建一个zskiplist结构
+    zsl->level = 1;                                                     // 设表中最大的节点层数为1
     zsl->length = 0;                                                    // 长度length为0
+    // 跳表的头节点不保存元素
     zsl->header = zslCreateNode(ZSKIPLIST_MAXLEVEL,0,NULL);   // 创建一个层数为32，分值为0，成员对象为NULL的表头结点
     for (j = 0; j < ZSKIPLIST_MAXLEVEL; j++) {
+        // j : 0-31
         zsl->header->level[j].forward = NULL;                          // 设定每层的forward指针指向NULL
         zsl->header->level[j].span = 0;                                // 设定每层的跨度为0
     }
@@ -38,46 +40,57 @@ zskiplist *zslCreate(void) {
 /* Free the specified skiplist node. The referenced SDS string representation
  * of the element is freed too, unless node->ele is set to NULL before calling
  * this function. */
+//// 释放跳表的一个节点
 void zslFreeNode(zskiplistNode *node) {
     sdsfree(node->ele);
     zfree(node);
 }
 
 /* Free a whole skiplist. */
+//// 释放整个跳表
 void zslFree(zskiplist *zsl) {
     zskiplistNode *node = zsl->header->level[0].forward, *next;
 
-    zfree(zsl->header);
+    zfree(zsl->header);     // 头节点可以直接释放，因为头节点不存放元素
+
+    // 使用level[0]中的forward指针，循环遍历跳表中的每个节点并释放
     while(node) {
         next = node->level[0].forward;
-        zslFreeNode(node);
+        zslFreeNode(node);  // 释放遍历到的节点
         node = next;
     }
-    zfree(zsl);
+    zfree(zsl);            // 释放跳表
 }
 
-// 随机生成一个level值
+//// 随机生成一个level数组的大小（1-32之间），作为数组索引使用时要-1
+//// ZSKIPLIST_P是0.25
 int zslRandomLevel(void) {
-    int level = 1;
+    int level = 1;                                              // level初始化为1
+
+    // random()&0xFFFF形成的数，均匀分布在区间[0,0xFFFF]上，那么这个数小于(ZSKIPLIST_P * 0xFFFF)的概率是多少呢？自然就是ZSKIPLIST_P，也就是0.25了。
+    // 因此，最终返回level为1的概率是1-0.25=0.75，返回level为2的概率为0.25*0.75，返回level为3的概率为0.25*0.25*0.75 ......
+    // 这就是所谓的幂次定律（powerlaw），越大的数出现的概率越小。
     while ((random()&0xFFFF) < (ZSKIPLIST_P * 0xFFFF))
         level += 1;
     return (level<ZSKIPLIST_MAXLEVEL) ? level : ZSKIPLIST_MAXLEVEL;
 }
 
-//插入节点
+//// 向跳跃表插入新的结点
+////  因为Redis中的跳跃表加入了层跨度的概念，因此比常规的跳跃表插入稍微复杂一些。这里主要使用了update和rank辅助数组（常规跳跃表的插入只需要update数组）。
 zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
-    zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;              // updata[] 记录每一层位于插入节点的前一个节点
-    unsigned int rank[ZSKIPLIST_MAXLEVEL];                      // rank[]   记录每一层位于插入节点的前一个节点的排名
+    zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;              // 记录插入节点在每层上的前驱节点
+    unsigned int rank[ZSKIPLIST_MAXLEVEL];                      // 记录该节点在跳跃表中的排名
+                                                                // 节点的排名，等于查找该结点时，之前所遍历过的结点的层跨度之和
     int i, level;
 
     serverAssert(!isnan(score));
     x = zsl->header;                                            // 表头节点
-    for (i = zsl->level-1; i >= 0; i--) {                       // 从最高层开始查找
-        rank[i] = i == (zsl->level-1) ? 0 : rank[i+1];          // 存储rank值是为了交叉快速地到达插入位置
+    for (i = zsl->level-1; i >= 0; i--) {                       //// 从最高层开始查找，首先在该层中寻找插入结点的前驱结点。
+        rank[i] = i == (zsl->level-1) ? 0 : rank[i+1];          // 这里表头（伪）节点排名为0
 
 
-        // 前向指针不为空，前置指针的分值小于score或
-        // 当前向指针的分值等于score且成员对象不等于0的情况下，继续向前查找
+        //// 只要插入结点比当前结点x在该层的后继结点x->level[i].forward要大
+        //// 则首先记录x后继结点的排名：rank[i] += x->level[i].span; 接着开始比较x的后继结点：x =x->level[i].forward。
         while (x->level[i].forward &&
                 (x->level[i].forward->score < score ||
                     (x->level[i].forward->score == score &&
@@ -350,15 +363,15 @@ unsigned long zslDeleteRangeByRank(zskiplist *zsl, unsigned int start, unsigned 
     return removed;
 }
 
-// 获取给定分值和成员的节点的排名
-// 跳跃表获取排名的平均复杂度为O（logN），最坏为O（n）
+//// 从跳跃表zsl中，得到分数为score，成员为o的结点的排名。若找到了该节点，则返回该结点的排名；没找到返回0。
 unsigned long zslGetRank(zskiplist *zsl, double score, sds ele) {
     zskiplistNode *x;
     unsigned long rank = 0;
     int i;
 
     x = zsl->header;
-    // 从最高层开始查询
+    // 从头结点的最高层开始，寻找每层上最后一个小于等于寻找结点的结点，找到之后，判断该结点是否就是要寻找的结点。
+    // 若是则返回其排名，不是则接着从下一层开始寻找，直到level[0]。
     for (i = zsl->level-1; i >= 0; i--) {
         while (x->level[i].forward &&
             (x->level[i].forward->score < score ||
