@@ -72,15 +72,15 @@ static void _intsetSet(intset *is, int pos, int64_t value) {
 intset *intsetNew(void) {
     intset *is = zmalloc(sizeof(intset));
     is->encoding = intrev32ifbe(INTSET_ENC_INT16);      // Redis在创建intset集合时，默认采用int16_t编码格式。
-    is->length = 0;
+    is->length = 0;                                     // 元素个数初始化为0
     return is;
 }
 
-/* Resize the intset */
-//// 扩容intset
+
+//// 扩容intset，没有对应的缩容机制
 static intset *intsetResize(intset *is, uint32_t len) {
-    uint32_t size = len*intrev32ifbe(is->encoding);
-    is = zrealloc(is,sizeof(intset)+size);
+    uint32_t size = len*intrev32ifbe(is->encoding);     // 按照原有的编码扩容
+    is = zrealloc(is,sizeof(intset)+size);            // zrealloc
     return is;
 }
 
