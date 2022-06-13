@@ -416,7 +416,7 @@ typedef long long mstime_t; /* millisecond time type. */
 
 /* A redis object, that is a type able to hold a string / list / set */
 
-// Redis Object type的定义
+//// Redis Object type的定义
 #define OBJ_STRING 0
 #define OBJ_LIST 1
 #define OBJ_SET 2
@@ -550,18 +550,62 @@ typedef struct RedisModuleDigest {
 #define LRU_CLOCK_RESOLUTION 1000 /* LRU clock resolution in ms */
 
 #define OBJ_SHARED_REFCOUNT INT_MAX
-/**     redis对象     */
+
+
+//// redis对象
+/**
+type:
+    OBJ_STRING 0
+    OBJ_LIST 1
+    OBJ_SET 2
+    OBJ_ZSET 3
+    OBJ_HASH 4
+encoding:
+    OBJ_ENCODING_INT 1          // long类型的整数
+    OBJ_ENCODING_RAW 0          // 简单动态字符串sds
+    OBJ_ENCODING_EMBSTR 8       // embstr编码的简单动态字符串sds
+    OBJ_ENCODING_HT 2           // 字典dict
+    BJ_ENCODING_LINKEDLIST 4   // 双端队列sdlist
+    BJ_ENCODING_ZIPLIST 5      // 压缩列表ziplist
+    OBJ_ENCODING_INTSET 6       // 整数集合intset
+    OBJ_ENCODING_SKIPLIST 7     // 跳跃表skiplist和字典
+
+    OBJ_ENCODING_ZIPMAP 3       //
+    OBJ_ENCODING_QUICKLIST 9    // 由双端链表和压缩列表构成的快速列表
+ */
 typedef struct redisObject {
     unsigned type:4;                        // Redis的对象有五种类型，分别是string、hash、list、set和zset，
                                             // type属性就是用来标识着五种数据类型。type占用4个bit位
 
     unsigned encoding:4;                    // Redis对象的编码方式由encoding参数指定，
                                             // 也就是表示ptr指向的数据以何种数据结构作为底层实现。该字段也占用4个bit位
+
     unsigned lru:LRU_BITS;                  // lru表示该对象最后一次被访问的时间，其占用24个bit位。保存该值的目的是为了计算该对象的空转时长，
                                             // 便于后续根据空转时长来决定是否释放该键，回收内存
+
     int refcount;                           // 引用计数
     void *ptr;                              // 值指针
 } robj;
+/**
+ * redis中的每种类型的对象都至少使用了两种不同的编码：
+ *
+ * OBJ_STRING   ->  OBJ_ENCODING_INT    ->  使用整数值实现的字符串对象
+ * OBJ_STRING   ->  OBJ_ENCODING_RAW    ->  使用简单动态字符串实现的字符串对象
+ * OBJ_STRING   ->  OBJ_ENCODING_EMBSTR ->  使用embstr编码的简单动态字符串实现的字符串对象
+ *
+ * OBJ_LIST     ->  BJ_ENCODING_ZIPLIST ->  使用压缩列表实现的列表对象（老版本使用）
+ * OBJ_LIST     ->  BJ_ENCODING_LINKEDLIST  ->  使用双端链表实现的列表对象（老版本使用）
+ * OBJ_LIST     ->  OBJ_ENCODING_QUICKLIST  -> 使用快表实现的列表对象（新版本只使用这一个）
+ *
+ * OBJ_HASH     ->  BJ_ENCODING_ZIPLIST ->  使用压缩列表实现的哈希对象
+ * OBJ_HASH     ->  OBJ_ENCODING_HT     ->  使用字典实现的哈希对象
+ *
+ * OBJ_SET      ->  OBJ_ENCODING_INTSET ->  使用整数集合实现的集合对象
+ * OBJ_SET      ->  OBJ_ENCODING_HT     ->  使用字典实现的集合对象
+ *
+ * OBJ_ZSET     ->  BJ_ENCODING_ZIPLIST ->  使用压缩列表实现的有序集合对象
+ * OBJ_ZSET     ->  OBJ_ENCODING_SKIPLIST   ->  使用跳跃表和字典实现的有序集合对象
+ */
 
 /* Macro used to initialize a Redis object allocated on the stack.
  * Note that this macro is taken near the structure definition to make sure
