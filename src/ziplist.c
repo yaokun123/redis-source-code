@@ -9,17 +9,12 @@
 #include "endianconv.h"
 #include "redisassert.h"
 
-#define ZIP_END 255         /* Special "end of ziplist" entry. */  // 压缩列表结束的标志
-#define ZIP_BIG_PREVLEN 254 /* Max number of bytes of the previous entry, for
-                               the "prevlen" field prefixing each entry, to be
-                               represented with just a single byte. Otherwise
-                               it is represented as FF AA BB CC DD, where
-                               AA BB CC DD are a 4 bytes unsigned integer
-                               representing the previous entry len. */
+#define ZIP_END 255                     // 压缩列表结束的标志
+#define ZIP_BIG_PREVLEN 254             // 节点中存储上一个节点的大小最大值，小于254时使用一个字节存储，等于254时候使用5个字节存储
 
 // 字符串和整数的掩码
-#define ZIP_STR_MASK 0xc0       // 0b11000000
-#define ZIP_INT_MASK 0x30       // 0b00110000
+#define ZIP_STR_MASK 0xc0               // 0b11000000
+#define ZIP_INT_MASK 0x30               // 0b00110000
 
 // 字符串
 #define ZIP_STR_06B (0 << 6)    // 1 Bytes - 2b = 6b （前两个bit为00，用后6个bit记录<= 63 bytes 的字符串）[00000000]
@@ -43,25 +38,21 @@
 #define INT24_MAX 0x7fffff
 #define INT24_MIN (-INT24_MAX - 1)
 
-// 计算encoding类型，是否为字符串，返回true或者false
+// 计算encoding类型，是否为字符串
 #define ZIP_IS_STR(enc) (((enc) & ZIP_STR_MASK) < ZIP_STR_MASK)
 
 /* Utility macros.*/
 //// 定义了一系列的宏，可以分别获取ziplist中存储的各个属性
 #define ZIPLIST_BYTES(zl)       (*((uint32_t*)(zl)))                            // 返回ziplist占有的内存字节数【zlbytes】
 #define ZIPLIST_TAIL_OFFSET(zl) (*((uint32_t*)((zl)+sizeof(uint32_t))))         // 取出最后一个entry的偏移量  【zltail】
-#define ZIPLIST_LENGTH(zl)      (*((uint16_t*)((zl)+sizeof(uint32_t)*2)))       // 取出zipliest中节点个数    【zllen】65535就不准了
+#define ZIPLIST_LENGTH(zl)      (*((uint16_t*)((zl)+sizeof(uint32_t)*2)))       // 取出zipliest中节点个数    【zllen】uint16_t最大存放65535
 #define ZIPLIST_HEADER_SIZE     (sizeof(uint32_t)*2+sizeof(uint16_t))           // ziplist头长度
 #define ZIPLIST_END_SIZE        (sizeof(uint8_t))                               // ziplist尾长度
 #define ZIPLIST_ENTRY_HEAD(zl)  ((zl)+ZIPLIST_HEADER_SIZE)                      // 返回ziplist第一个节点位置
 #define ZIPLIST_ENTRY_TAIL(zl)  ((zl)+intrev32ifbe(ZIPLIST_TAIL_OFFSET(zl)))    // 返回ziplist最后一个节点位置
 #define ZIPLIST_ENTRY_END(zl)   ((zl)+intrev32ifbe(ZIPLIST_BYTES(zl))-1)        // 返回ziplist尾部位置
 
-/* Increment the number of items field in the ziplist header. Note that this
- * macro should never overflow the unsigned 16 bit integer, since entires are
- * always pushed one at a time. When UINT16_MAX is reached we want the count
- * to stay there to signal that a full scan is needed to get the number of
- * items inside the ziplist. */
+// 增加ziplist中存放的元素个数
 #define ZIPLIST_INCR_LENGTH(zl,incr) { \
     if (ZIPLIST_LENGTH(zl) < UINT16_MAX) \
         ZIPLIST_LENGTH(zl) = intrev16ifbe(intrev16ifbe(ZIPLIST_LENGTH(zl))+incr); \
@@ -92,14 +83,13 @@ typedef struct zlentry {
     (zle)->p = NULL; \
 }
 
-/* Extract the encoding from the byte pointed by 'ptr' and set it into
- * 'encoding' field of the zlentry structure. */
+//// ziplist节点编码
 #define ZIP_ENTRY_ENCODING(ptr, encoding) do {  \
     (encoding) = (ptr[0]); \
     if ((encoding) < ZIP_STR_MASK) (encoding) &= ZIP_STR_MASK; \
 } while(0)
 
-/* Return bytes needed to store integer encoded by 'encoding'. */
+
 //// int encoding对应的大小
 unsigned int zipIntSize(unsigned char encoding) {
     switch(encoding) {
@@ -235,7 +225,7 @@ unsigned int zipRawEntryLength(unsigned char *p) {
     return prevlensize + lensize + len;
 }
 
-// 试图编码为int类型
+//// 试图编码为int类型
 int zipTryEncoding(unsigned char *entry, unsigned int entrylen, long long *v, unsigned char *encoding) {
     long long value;
 
@@ -485,8 +475,8 @@ unsigned char *__ziplistDelete(unsigned char *zl, unsigned char *p, unsigned int
 
 //// 在p的位置上插入元素，要么是头插，要么是尾插
 unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned char *s, unsigned int slen) {
-    size_t curlen = intrev32ifbe(ZIPLIST_BYTES(zl)), reqlen;    // 当前长度和插入节点后需要的长度
-    unsigned int prevlensize, prevlen = 0;                        // 前置节点长度和编码该长度值所需的长度
+    size_t curlen = intrev32ifbe(ZIPLIST_BYTES(zl)), reqlen;    // 当前ziplist的size 和插入节点后的size
+    unsigned int prevlensize, prevlen = 0;                        //  前置节点长度 和 编码该长度值所需的长度
     size_t offset;
     int nextdiff = 0;
     unsigned char encoding = 0;
