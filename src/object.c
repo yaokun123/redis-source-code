@@ -48,16 +48,18 @@ robj *createRawStringObject(const char *ptr, size_t len) {
     return createObject(OBJ_STRING, sdsnewlen(ptr,len));
 }
 
-// EMRSTR编码只需要调用一次内存分配函数
-// 它的redisobject和sds是放在一段连续的内存空间上
+//// 创建一个新的字符串对象，并使用embstr编码
 robj *createEmbeddedStringObject(const char *ptr, size_t len) {
-    robj *o = zmalloc(sizeof(robj)+sizeof(struct sdshdr8)+len+1);
+
+    //                         16                   3         字符串真实长度     1是为了兼容c字符串的'\0'结束字符
+    // len最大44，对象最大64
+    robj *o = zmalloc(sizeof(robj)+sizeof(struct sdshdr8)+len+1);   // EMRSTR编码只需要调用一次内存分配函数，它的redisobject和sds是放在一段连续的内存空间上
     struct sdshdr8 *sh = (void*)(o+1);                                  // sds的起始地址sh
 
     // 设定redisObject的参数
     o->type = OBJ_STRING;
     o->encoding = OBJ_ENCODING_EMBSTR;
-    o->ptr = sh+1;
+    o->ptr = sh+1;                                                      // 设置对象中的ptr（字符串的开始地址）
     o->refcount = 1;
     if (server.maxmemory_policy & MAXMEMORY_FLAG_LFU) {
         o->lru = (LFUGetTimeInMinutes()<<8) | LFU_INIT_VAL;
@@ -69,11 +71,11 @@ robj *createEmbeddedStringObject(const char *ptr, size_t len) {
     sh->len = len;
     sh->alloc = len;
     sh->flags = SDS_TYPE_8;
-    if (ptr) {
+    if (ptr) {                                                          // 如果传入了字符串，则将字符串拷贝到新创建的对象上
         memcpy(sh->buf,ptr,len);
         sh->buf[len] = '\0';
     } else {
-        memset(sh->buf,0,len+1);
+        memset(sh->buf,0,len+1);                                        // 如果没有传入字符串，则将新创建的对象上的字符串置为0即可
     }
     return o;
 }
