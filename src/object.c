@@ -362,6 +362,8 @@ robj *tryObjectEncoding(robj *o) {
     if (o->refcount > 1) return o;                                      // 如果引用计数 >1 不能转成其他编码，可能影响其他引用的使用
 
     len = sdslen(s);                                                    // 检查字符串是否可以转化为int
+
+    //// int
     if (len <= 20 && string2l(s,len,&value)) {                          // 字符串长度小于20位 && 转化为int成功
         if ((server.maxmemory == 0 ||
             !(server.maxmemory_policy & MAXMEMORY_FLAG_NO_SHARED_INTEGERS)) &&
@@ -379,6 +381,7 @@ robj *tryObjectEncoding(robj *o) {
         }
     }
 
+    //// embstr
     if (len <= OBJ_ENCODING_EMBSTR_SIZE_LIMIT) {                        // len <= 44转为embstr
         robj *emb;
 
