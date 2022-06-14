@@ -78,7 +78,7 @@ robj *createEmbeddedStringObject(const char *ptr, size_t len) {
     return o;
 }
 
-// 当长度小于44字节时，采用embstr编码
+//// 当长度小于44字节时，采用embstr编码
 #define OBJ_ENCODING_EMBSTR_SIZE_LIMIT 44
 
 //创建字符串对象
@@ -347,61 +347,49 @@ int isObjectRepresentableAsLongLong(robj *o, long long *llval) {
 }
 
 /* Try to encode a string object in order to save space */
+//// 尝试将一个字符串对象编码
 robj *tryObjectEncoding(robj *o) {
     long value;
     sds s = o->ptr;
     size_t len;
 
-    // 保证o是一个字符串对象
-    serverAssertWithInfo(NULL,o,o->type == OBJ_STRING);
+    serverAssertWithInfo(NULL,o,o->type == OBJ_STRING);             // 保证o是一个字符串对象
 
-    // 保证encoding底层编码为RAW or EMBSTR类型
-    if (!sdsEncodedObject(o)) return o;
+    if (!sdsEncodedObject(o)) return o;                                 // 保证encoding底层编码为RAW/EMBSTR类型
 
-    // 如果引用计数 >1 不能转成其他编码，可能影响其他引用
-     if (o->refcount > 1) return o;
+    if (o->refcount > 1) return o;                                      // 如果引用计数 >1 不能转成其他编码，可能影响其他引用的使用
 
-    // 检查字符串是否可以转化为int
-    len = sdslen(s);
-    if (len <= 20 && string2l(s,len,&value)) {// 字符串长度小于20位 && 转化为int成功
+    len = sdslen(s);                                                    // 检查字符串是否可以转化为int
+    if (len <= 20 && string2l(s,len,&value)) {                          // 字符串长度小于20位 && 转化为int成功
         if ((server.maxmemory == 0 ||
             !(server.maxmemory_policy & MAXMEMORY_FLAG_NO_SHARED_INTEGERS)) &&
             value >= 0 &&
             value < OBJ_SHARED_INTEGERS)
-        {
+        {                                                               // 使用共享对象，value<10000
             decrRefCount(o);
             incrRefCount(shared.integers[value]);
             return shared.integers[value];
         } else {
-            if (o->encoding == OBJ_ENCODING_RAW) sdsfree(o->ptr);
-            o->encoding = OBJ_ENCODING_INT;
-            o->ptr = (void*) value;
+            if (o->encoding == OBJ_ENCODING_RAW) sdsfree(o->ptr);       // 释放字符串
+            o->encoding = OBJ_ENCODING_INT;                             // 修改对象的编码为int
+            o->ptr = (void*) value;                                     // 直接将数字放在对象里，void *ptr 位置此时存放的是一个数字而不是地址
             return o;
         }
     }
 
-    // len <= 44转为embstr
-    if (len <= OBJ_ENCODING_EMBSTR_SIZE_LIMIT) {
+    if (len <= OBJ_ENCODING_EMBSTR_SIZE_LIMIT) {                        // len <= 44转为embstr
         robj *emb;
 
-        if (o->encoding == OBJ_ENCODING_EMBSTR) return o;
-        emb = createEmbeddedStringObject(s,sdslen(s));
-        decrRefCount(o);
-        return emb;
+        if (o->encoding == OBJ_ENCODING_EMBSTR) return o;               // 如果已经是embstr直接返回
+        emb = createEmbeddedStringObject(s,sdslen(s));                  // 创建一个新的字符串对象，并使用embstr编码
+        decrRefCount(o);                                                // 原对象的引用计数减1
+        return emb;                                                     // 返回新创建的对象
     }
 
-    /* We can't encode the object...
-     *
-     * Do the last try, and at least optimize the SDS string inside
-     * the string object to require little space, in case there
-     * is more than 10% of free space at the end of the SDS string.
-     *
-     * We do that only for relatively large strings as this branch
-     * is only entered if the length of the string is greater than
-     * OBJ_ENCODING_EMBSTR_SIZE_LIMIT. */
+    //// 走到这就不再做编码的转换
     if (o->encoding == OBJ_ENCODING_RAW &&
         sdsavail(s) > len/10)
-    {
+    {                                                                   // 这里是个优化，空余空间较大的时候释放空余空间
         o->ptr = sdsRemoveFreeSpace(o->ptr);
     }
 

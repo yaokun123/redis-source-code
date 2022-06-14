@@ -92,7 +92,7 @@ void setCommand(client *c) {
         }
     }
 
-    c->argv[2] = tryObjectEncoding(c->argv[2]);             // 判断value是否可以编码成整数，如果能则编码；反之不做处理
+    c->argv[2] = tryObjectEncoding(c->argv[2]);             //// 判断value是否可以编码成整数，如果能则编码；反之不做处理
     setGenericCommand(c,flags,c->argv[1],c->argv[2],expire,unit,NULL,NULL);// 调用底层函数进行键值对设定
 }
 
