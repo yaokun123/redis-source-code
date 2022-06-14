@@ -177,10 +177,9 @@ robj *createIntsetObject(void) {
     return o;
 }
 
-// 创建一个hash对象
+//// 创建一个hash对象
 robj *createHashObject(void) {
-    // 默认使用ziplist
-    unsigned char *zl = ziplistNew();
+    unsigned char *zl = ziplistNew();           // 默认使用ziplist编码
     robj *o = createObject(OBJ_HASH, zl);
     o->encoding = OBJ_ENCODING_ZIPLIST;
     return o;

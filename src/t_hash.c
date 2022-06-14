@@ -1,32 +1,3 @@
-/*
- * Copyright (c) 2009-2012, Salvatore Sanfilippo <antirez at gmail dot com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *   * Redistributions of source code must retain the above copyright notice,
- *     this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *   * Neither the name of Redis nor the names of its contributors may be used
- *     to endorse or promote products derived from this software without
- *     specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include "server.h"
 #include <math.h>
 
@@ -34,9 +5,7 @@
  * Hash type API
  *----------------------------------------------------------------------------*/
 
-/* Check the length of a number of objects to see if we need to convert a
- * ziplist to a real hash. Note that we only check string encoded objects
- * as their string length can be queried in constant time. */
+//// 将hash的底层编码从ziplist改为dict
 void hashTypeTryConversion(robj *o, robj **argv, int start, int end) {
     int i;
 
@@ -97,15 +66,6 @@ sds hashTypeGetFromHashTable(robj *o, sds field) {
     return dictGetVal(de);
 }
 
-/* Higher level function of hashTypeGet*() that returns the hash value
- * associated with the specified field. If the field is found C_OK
- * is returned, otherwise C_ERR. The returned object is returned by
- * reference in either *vstr and *vlen if it's returned in string form,
- * or stored in *vll if it's returned as a number.
- *
- * If *vll is populated *vstr is set to NULL, so the caller
- * can always check the function return by checking the return value
- * for C_OK and checking if vll (or vstr) is NULL. */
 int hashTypeGetValue(robj *o, sds field, unsigned char **vstr, unsigned int *vlen, long long *vll) {
     if (o->encoding == OBJ_ENCODING_ZIPLIST) {
         *vstr = NULL;
@@ -178,24 +138,7 @@ int hashTypeExists(robj *o, sds field) {
     return 0;
 }
 
-/* Add a new field, overwrite the old with the new value if it already exists.
- * Return 0 on insert and 1 on update.
- *
- * By default, the key and value SDS strings are copied if needed, so the
- * caller retains ownership of the strings passed. However this behavior
- * can be effected by passing appropriate flags (possibly bitwise OR-ed):
- *
- * HASH_SET_TAKE_FIELD -- The SDS field ownership passes to the function.
- * HASH_SET_TAKE_VALUE -- The SDS value ownership passes to the function.
- *
- * When the flags are used the caller does not need to release the passed
- * SDS string(s). It's up to the function to use the string to create a new
- * entry or to free the SDS string before returning to the caller.
- *
- * HASH_SET_COPY corresponds to no flags passed, and means the default
- * semantics of copying the values if needed.
- *
- */
+
 #define HASH_SET_TAKE_FIELD (1<<0)
 #define HASH_SET_TAKE_VALUE (1<<1)
 #define HASH_SET_COPY 0
@@ -413,16 +356,7 @@ sds hashTypeCurrentFromHashTable(hashTypeIterator *hi, int what) {
     }
 }
 
-/* Higher level function of hashTypeCurrent*() that returns the hash value
- * at current iterator position.
- *
- * The returned element is returned by reference in either *vstr and *vlen if
- * it's returned in string form, or stored in *vll if it's returned as
- * a number.
- *
- * If *vll is populated *vstr is set to NULL, so the caller
- * can always check the function return by checking the return value
- * type checking if vstr == NULL. */
+
 void hashTypeCurrentObject(hashTypeIterator *hi, int what, unsigned char **vstr, unsigned int *vlen, long long *vll) {
     if (hi->encoding == OBJ_ENCODING_ZIPLIST) {
         *vstr = NULL;
@@ -448,7 +382,7 @@ sds hashTypeCurrentObjectNewSds(hashTypeIterator *hi, int what) {
     return sdsfromlonglong(vll);
 }
 
-// 根据key查找哈希表，不存在就创建一个
+//// 根据key查找哈希表，不存在就创建一个
 robj *hashTypeLookupWriteOrCreate(client *c, robj *key) {
     robj *o = lookupKeyWrite(c->db,key);
     if (o == NULL) {
