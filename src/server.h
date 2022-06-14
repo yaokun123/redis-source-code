@@ -597,7 +597,7 @@ typedef struct redisObject {
  * OBJ_LIST     ->  OBJ_ENCODING_LINKEDLIST  ->  使用双端链表实现的列表对象（老版本使用，新版本只使用quicklist）
  * OBJ_LIST     ->  OBJ_ENCODING_QUICKLIST  -> 使用快表实现的列表对象
  *
- * OBJ_HASH     ->  OBJ_ENCODING_ZIPLIST ->  使用压缩列表实现的哈希对象
+ * OBJ_HASH     ->  OBJ_ENCODING_ZIPLIST ->  使用压缩列表实现的哈希对象  （键和值的长度都小于64 & 节点元素小于512） 可以通过配置文件配置
  * OBJ_HASH     ->  OBJ_ENCODING_HT     ->  使用字典实现的哈希对象
  *
  * OBJ_SET      ->  OBJ_ENCODING_INTSET ->  使用整数集合实现的集合对象
