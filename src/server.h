@@ -593,8 +593,8 @@ typedef struct redisObject {
  * OBJ_STRING   ->  OBJ_ENCODING_RAW    ->  使用简单动态字符串实现的字符串对象
  * OBJ_STRING   ->  OBJ_ENCODING_EMBSTR ->  使用embstr编码的简单动态字符串实现的字符串对象
  *
- * OBJ_LIST     ->  BJ_ENCODING_ZIPLIST ->  使用压缩列表实现的列表对象
- * OBJ_LIST     ->  BJ_ENCODING_LINKEDLIST  ->  使用双端链表实现的列表对象（老版本使用，新版本只使用ziplist或quicklist）
+ * OBJ_LIST     ->  BJ_ENCODING_ZIPLIST ->  使用压缩列表实现的列表对象（老版本使用，新版本只使用quicklist）
+ * OBJ_LIST     ->  BJ_ENCODING_LINKEDLIST  ->  使用双端链表实现的列表对象（老版本使用，新版本只使用quicklist）
  * OBJ_LIST     ->  OBJ_ENCODING_QUICKLIST  -> 使用快表实现的列表对象
  *
  * OBJ_HASH     ->  BJ_ENCODING_ZIPLIST ->  使用压缩列表实现的哈希对象
