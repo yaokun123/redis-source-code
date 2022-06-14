@@ -603,7 +603,7 @@ typedef struct redisObject {
  * OBJ_SET      ->  OBJ_ENCODING_INTSET ->  使用整数集合实现的集合对象（所有元素都是整数值 & 节点元素小于512）可以通过配置文件配置
  * OBJ_SET      ->  OBJ_ENCODING_HT     ->  使用字典实现的集合对象
  *
- * OBJ_ZSET     ->  BJ_ENCODING_ZIPLIST ->  使用压缩列表实现的有序集合对象
+ * OBJ_ZSET     ->  BJ_ENCODING_ZIPLIST ->  使用压缩列表实现的有序集合对象（成员长度小于64 & 节点元素小于128）可以通过配置文件配置
  * OBJ_ZSET     ->  OBJ_ENCODING_SKIPLIST   ->  使用跳跃表和字典实现的有序集合对象
  */
 
