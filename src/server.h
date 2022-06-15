@@ -1037,8 +1037,8 @@ struct redisServer {
     int aof_rewrite_scheduled;      //// 是一个调度标记，BGREWRITEAOF命令并不会立即启动重写机制，而是设置好aof_rewrite_scheduled，在下一次心跳中去启动该机制
 
     int aof_no_fsync_on_rewrite;    /* Don't fsync if a rewrite is in prog. */
-    pid_t aof_child_pid;            //// PID if rewriting process
-    list *aof_rewrite_buf_blocks;   //// Hold changes during an AOF rewrite. */
+    pid_t aof_child_pid;            //// aof重写子进程id
+    list *aof_rewrite_buf_blocks;   //// aof重写缓冲区
     time_t aof_rewrite_time_last;   /* Time used by last AOF rewrite run. */
     time_t aof_rewrite_time_start;  /* Current AOF rewrite start time. */
     int aof_lastbgrewrite_status;   /* C_OK or C_ERR */
