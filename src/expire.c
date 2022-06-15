@@ -64,8 +64,9 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
     }
 }
 
-// 每次执行时遍历指定个数的数据库，然后从expires字典中随机取出一个带过期时间的键，检查它是否过期，如过期直接删除。
 
+//// 定期删除策略的实现，每当Redis周期性的操作serverCron函数时，该函数就会被调用。他在规定时间内，分多次遍历服务器中的多个数据库。
+//// 从数据库的expires字典中随机检查一部分键的过期事件，并删除其中的过期键。
 void activeExpireCycle(int type) {
     /* This function has some global state in order to continue the work
      * incrementally across calls. */
