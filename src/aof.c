@@ -1218,14 +1218,13 @@ int rewriteAppendOnlyFile(char *filename) {
     }
 
 
-    //// 以下是读取在重写AOF文件时，服务器新加入的数据
-    // 向道的写入端写入一个!通知父进程停止增加数据
+    // 向管道的写入端写入一个!通知父进程停止增加数据
     if (write(server.aof_pipe_write_ack_to_parent,"!",1) != 1) goto werr;
     if (anetNonBlock(NULL,server.aof_pipe_read_ack_from_parent) != ANET_OK)
         goto werr;
 
     // 父进程从redisServer.aof_pipe_read_ack_from_child这个管道的读取端上监听的可读事件返回，
-    // 调用对应的事件处理函数aofChildPipeReadable，这个函数会停止向redisServer.aof_pipe_write_data_to_child对应的管道之中写入数据，
+    //// 调用对应的事件处理函数aofChildPipeReadable，这个函数会停止向redisServer.aof_pipe_write_data_to_child对应的管道之中写入数据，
     // 同时向redisServer.aof_pipe_write_ack_to_child对应的管道之中写入一个确认数据!。
     // 此时停止了将重写缓存写入管道的过程，但是由于子进程没有退出，如果在这一步之后执行的命令，依然会被记录到父进程的重写缓存之中，但不会发送给子进程
     if (syncRead(server.aof_pipe_read_ack_from_parent,&byte,1,5000) != 1 ||
@@ -1322,11 +1321,11 @@ int aofCreatePipes(void) {
     server.aof_pipe_write_data_to_child = fds[1];// 父写（数据）
     server.aof_pipe_read_data_from_parent = fds[0];// 子读（数据）
 
-    server.aof_pipe_write_ack_to_parent = fds[3];// 子写
-    server.aof_pipe_read_ack_from_child = fds[2];// 父读
+    server.aof_pipe_write_ack_to_parent = fds[3];// 子写（结束标识）
+    server.aof_pipe_read_ack_from_child = fds[2];// 父读（结束标识）
 
-    server.aof_pipe_write_ack_to_child = fds[5];// 父写
-    server.aof_pipe_read_ack_from_parent = fds[4];// 子读
+    server.aof_pipe_write_ack_to_child = fds[5];// 父写（结束标识）
+    server.aof_pipe_read_ack_from_parent = fds[4];// 子读（结束标识）
 
     server.aof_stop_sending_diff = 0;
     return C_OK;

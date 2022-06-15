@@ -1032,8 +1032,8 @@ struct redisServer {
 
     //// AOF 重写相关操作
     off_t aof_rewrite_min_size;     //// 用于开启重写机制的AOF文件大小的阈值
-    off_t aof_rewrite_base_size;
-    int aof_rewrite_perc;           //// 这两个字段用于处理当AOF文件大小超过aof_rewrite_base_size的百分比，如果超过阈值，那么将开启重写机制。
+    off_t aof_rewrite_base_size;    //// 表示上一次执行aof重写后的aod大小
+    int aof_rewrite_perc;           //// 这个字段用于处理当AOF文件大小超过aof_rewrite_base_size的百分比，如果超过阈值，那么将开启重写机制。
     int aof_rewrite_scheduled;      //// 是一个调度标记，BGREWRITEAOF命令并不会立即启动重写机制，而是设置好aof_rewrite_scheduled，在下一次心跳中去启动该机制
 
     int aof_no_fsync_on_rewrite;    /* Don't fsync if a rewrite is in prog. */
@@ -1048,15 +1048,15 @@ struct redisServer {
     int aof_load_truncated;         /* Don't stop on unexpected AOF EOF. */
     int aof_use_rdb_preamble;       //// Use RDB preamble on AOF rewrites. */
     /* AOF pipes used to communicate between parent and child during rewrite. */
-    int aof_pipe_write_data_to_child;
-    int aof_pipe_read_data_from_parent;
-    int aof_pipe_write_ack_to_parent;
-    int aof_pipe_read_ack_from_child;
-    int aof_pipe_write_ack_to_child;
-    int aof_pipe_read_ack_from_parent;
+    int aof_pipe_write_data_to_child;               //// aof父子间匿名管道通信
+    int aof_pipe_read_data_from_parent;            //// aof父子间匿名管道通信
+    int aof_pipe_write_ack_to_parent;              //// aof父子间匿名管道通信
+    int aof_pipe_read_ack_from_child;            //// aof父子间匿名管道通信
+    int aof_pipe_write_ack_to_child;            //// aof父子间匿名管道通信
+    int aof_pipe_read_ack_from_parent;        //// aof父子间匿名管道通信
     int aof_stop_sending_diff;     /* If true stop sending accumulated diffs
                                       to child process. */
-    sds aof_child_diff;             //// AOF diff accumulator child side.
+    sds aof_child_diff;             //// aof重写时，新写入的数据
 
 
     /* RDB persistence */
