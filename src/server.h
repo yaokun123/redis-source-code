@@ -1054,9 +1054,8 @@ struct redisServer {
     int aof_pipe_read_ack_from_child;            //// aof父子间匿名管道通信
     int aof_pipe_write_ack_to_child;            //// aof父子间匿名管道通信
     int aof_pipe_read_ack_from_parent;        //// aof父子间匿名管道通信
-    int aof_stop_sending_diff;     /* If true stop sending accumulated diffs
-                                      to child process. */
-    sds aof_child_diff;             //// aof重写时，新写入的数据
+    int aof_stop_sending_diff;                //// 标识是否停止通信
+    sds aof_child_diff;                     //// aof重写时，从管道中读取的数据写到这里
 
 
     /* RDB persistence */
