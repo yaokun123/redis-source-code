@@ -38,11 +38,8 @@ robj *lookupKey(redisDb *db, robj *key, int flags) {
 robj *lookupKeyReadWithFlags(redisDb *db, robj *key, int flags) {
     robj *val;
 
-    if (expireIfNeeded(db,key) == 1) {
-        /* Key expired. If we are in the context of a master, expireIfNeeded()
-         * returns 0 only when the key does not exist at all, so it's safe
-         * to return NULL ASAP. */
-        if (server.masterhost == NULL) return NULL;
+    if (expireIfNeeded(db,key) == 1) {                                          // 键已经过期
+        if (server.masterhost == NULL) return NULL;                             // 主节点直接返回空
 
         /* However if we are in the context of a slave, expireIfNeeded() will
          * not really try to expire the key, it only returns information
@@ -56,6 +53,7 @@ robj *lookupKeyReadWithFlags(redisDb *db, robj *key, int flags) {
          * will say the key as non exisitng.
          *
          * Notably this covers GETs when slaves are used to scale reads. */
+        //// 从节点也返回空，但是从节点expireIfNeeded没有删除过期键
         if (server.current_client &&
             server.current_client != server.master &&
             server.current_client->cmd &&
@@ -65,6 +63,8 @@ robj *lookupKeyReadWithFlags(redisDb *db, robj *key, int flags) {
         }
     }
     val = lookupKey(db,key,flags);
+
+    //// 统计命中情况
     if (val == NULL)
         server.stat_keyspace_misses++;
     else
