@@ -3436,9 +3436,13 @@ int checkForSentinelMode(int argc, char **argv) {
     return 0;
 }
 
+
 /* Function called at startup to load RDB or AOF file in memory. */
+//// 从aof/rdb加载数据到内存中
 void loadDataFromDisk(void) {
     long long start = ustime();
+
+    // 如果使用了aof则使用aof来恢复数据，否则使用rdb恢复
     if (server.aof_state == AOF_ON) {
         if (loadAppendOnlyFile(server.aof_filename) == C_OK)
             serverLog(LL_NOTICE,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
@@ -3763,6 +3767,8 @@ int main(int argc, char **argv) {
         linuxMemoryWarnings();
     #endif
         moduleLoadFromQueue();
+
+        //// 从磁盘加载数据到内存
         loadDataFromDisk();
         if (server.cluster_enabled) {
             if (verifyClusterConfigWithData() == C_ERR) {
