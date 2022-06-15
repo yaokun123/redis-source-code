@@ -1058,15 +1058,15 @@ struct redisServer {
                                       to child process. */
     sds aof_child_diff;             //// AOF diff accumulator child side.
     /* RDB persistence */
-    long long dirty;                /* Changes to DB from the last save */
+    long long dirty;                //// 记录距离上一次成功save/bgsave之后，进行了多少次修改
     long long dirty_before_bgsave;  /* Used to restore dirty on failed BGSAVE */
-    pid_t rdb_child_pid;            /* PID of RDB saving child */
+    pid_t rdb_child_pid;            //// bgsave的进程id
     struct saveparam *saveparams;   //// 记录了保存条件的数组，rdb的save配置条件
     int saveparamslen;              /* Number of saving points */
-    char *rdb_filename;             /* Name of RDB file */
-    int rdb_compression;            /* Use compression in RDB? */
-    int rdb_checksum;               /* Use RDB checksum? */
-    time_t lastsave;                /* Unix time of last successful save */
+    char *rdb_filename;             //// rdb的文件名
+    int rdb_compression;            //// rdb文件是否使用压缩
+    int rdb_checksum;               //// rdb文件是否使用校验和
+    time_t lastsave;                //// 记录上一次成功save/bgsave的时候
     time_t lastbgsave_try;          /* Unix time of last attempted bgsave */
     time_t rdb_save_time_last;      /* Time used by last RDB save run. */
     time_t rdb_save_time_start;     /* Current RDB save start time. */
