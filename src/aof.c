@@ -635,8 +635,8 @@ void freeFakeClient(struct client *c) {
     zfree(c);
 }
 
-// 当数据存储在AOF文件中后，服务器在下一次重启需要载入数据，AOF数据载入比较有意思，其会开一个伪Redis客户端
-// 然后模仿客户端对服务器执行命令的过程，将AOF中存储的命令一一执行，执行完毕后服务器数据库中的数据就和上次一样了。
+//// 当数据存储在AOF文件中后，服务器在下一次重启需要载入数据，AOF数据载入比较有意思，其会开一个伪Redis客户端
+//// 然后模仿客户端对服务器执行命令的过程，将AOF中存储的命令一一执行，执行完毕后服务器数据库中的数据就和上次一样了。
 int loadAppendOnlyFile(char *filename) {
     struct client *fakeClient;
     FILE *fp = fopen(filename,"r");
