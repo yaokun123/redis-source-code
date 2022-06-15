@@ -1017,10 +1017,10 @@ struct redisServer {
 
     /* AOF persistence */
     //// 命令写入aof_buf相关操作
-    int aof_state;                  //// AOF_(ON-0|OFF-1|WAIT_REWRITE-2)
+    int aof_state;                  //// AOF_(ON-0|OFF-1|WAIT_REWRITE-2)记录aof是否打开
     int aof_fsync;                  //// 标记了命令记录被同步写入磁盘AOF文件的策略(AOF_FSYNC_NO-0|AOF_FSYNC_ALWAYS-1|AOF_FSYNC_EVERYSEC-2)
     char *aof_filename;             //// AOF文件的文件名。
-    sds aof_buf;                    //// AOF策略的内存缓冲，命令记录先被写入这个内存缓冲之中，然后在写入文件的内核缓冲区。
+    sds aof_buf;                    //// AOF策略的内存缓冲，命令记录先被写入这个内存缓冲之中，然后再写入文件的内核缓冲区。
     int aof_fd;                     //// AOF文件对应的文件描述符
     int aof_selected_db;            //// 上一条被记录的命令对应的数据库编号，如果新的命令对应数据库发生变化，需要补充追加一条SELECT命令的记录
 
