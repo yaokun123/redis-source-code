@@ -751,8 +751,8 @@ typedef struct client {
 } client;
 
 struct saveparam {
-    time_t seconds;
-    int changes;
+    time_t seconds;     // 秒数
+    int changes;        // 修改数
 };
 
 struct moduleLoadQueueEntry {
@@ -1061,7 +1061,7 @@ struct redisServer {
     long long dirty;                /* Changes to DB from the last save */
     long long dirty_before_bgsave;  /* Used to restore dirty on failed BGSAVE */
     pid_t rdb_child_pid;            /* PID of RDB saving child */
-    struct saveparam *saveparams;   /* Save points array for RDB */
+    struct saveparam *saveparams;   //// 记录了保存条件的数组，rdb的save配置条件
     int saveparamslen;              /* Number of saving points */
     char *rdb_filename;             /* Name of RDB file */
     int rdb_compression;            /* Use compression in RDB? */
