@@ -1057,12 +1057,14 @@ struct redisServer {
     int aof_stop_sending_diff;     /* If true stop sending accumulated diffs
                                       to child process. */
     sds aof_child_diff;             //// AOF diff accumulator child side.
+
+
     /* RDB persistence */
     long long dirty;                //// 记录距离上一次成功save/bgsave之后，进行了多少次修改
     long long dirty_before_bgsave;  /* Used to restore dirty on failed BGSAVE */
     pid_t rdb_child_pid;            //// bgsave的进程id
     struct saveparam *saveparams;   //// 记录了保存条件的数组，rdb的save配置条件
-    int saveparamslen;              /* Number of saving points */
+    int saveparamslen;              //// 记录了保存条件的数组大小
     char *rdb_filename;             //// rdb的文件名
     int rdb_compression;            //// rdb文件是否使用压缩
     int rdb_checksum;               //// rdb文件是否使用校验和
