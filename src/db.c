@@ -41,18 +41,6 @@ robj *lookupKeyReadWithFlags(redisDb *db, robj *key, int flags) {
     if (expireIfNeeded(db,key) == 1) {                                          // 键已经过期
         if (server.masterhost == NULL) return NULL;                             // 主节点直接返回空
 
-        /* However if we are in the context of a slave, expireIfNeeded() will
-         * not really try to expire the key, it only returns information
-         * about the "logical" status of the key: key expiring is up to the
-         * master in order to have a consistent view of master's data set.
-         *
-         * However, if the command caller is not the master, and as additional
-         * safety measure, the command invoked is a read-only command, we can
-         * safely return NULL here, and provide a more consistent behavior
-         * to clients accessign expired values in a read-only fashion, that
-         * will say the key as non exisitng.
-         *
-         * Notably this covers GETs when slaves are used to scale reads. */
         //// 从节点也返回空，但是从节点expireIfNeeded没有删除过期键
         if (server.current_client &&
             server.current_client != server.master &&
