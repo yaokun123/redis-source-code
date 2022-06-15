@@ -628,8 +628,8 @@ struct evictionPoolEntry; /* Defined in evict.c */
  */
 //// 数据库的结构
 typedef struct redisDb {
-    dict *dict;                 // 数据库的键空间
-    dict *expires;              // 过期时间
+    dict *dict;                 // 数据库的键空间，保存着数据库中的所有键值对
+    dict *expires;              // 过期字典，保存着键的过期时间（键是一个指针，指向键空间中的某个键对象）
     dict *blocking_keys;        // 存放所有造成阻塞的键及其客户端
     dict *ready_keys;           // 存放push操作添加的造成阻塞的键，便于解阻塞
     dict *watched_keys;         // 被watch命令监控的键和相应的客户端，用于multi/exec
@@ -693,10 +693,11 @@ typedef struct readyList {
 
 /* With multiplexing we need to take per-client state.
  * Clients are taken in a linked list. */
+//// 客户端的结构体
 typedef struct client {
     uint64_t id;            /* Client incremental unique ID. */
     int fd;                 /* Client socket. */
-    redisDb *db;                                                                // 当前数据库
+    redisDb *db;            //// 记录客户端当前正在使用的数据库
     robj *name;             /* As set by CLIENT SETNAME. */
     sds querybuf;           //// Buffer we use to accumulate client queries. */
     sds pending_querybuf;   /* If this is a master, this buffer represents the
