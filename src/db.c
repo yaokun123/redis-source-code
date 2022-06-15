@@ -908,7 +908,7 @@ void setExpire(client *c, redisDb *db, robj *key, long long when) {
         rememberSlaveKeyWithExpire(db,key);
 }
 
-// 获取键过期时间
+//// 获取键过期时间
 long long getExpire(redisDb *db, robj *key) {
     dictEntry *de;
 
@@ -945,25 +945,25 @@ void propagateExpire(redisDb *db, robj *key, int lazy) {
     decrRefCount(argv[1]);
 }
 
-// 惰性删除函数
+//// 惰性删除策略的实现，所有读写数据库的redis命令在执行之前都会调用该函数进行检查。
 int expireIfNeeded(redisDb *db, robj *key) {
-    mstime_t when = getExpire(db,key);          // 获取该键的过期时间
+    mstime_t when = getExpire(db,key);                              // 获取该键的过期时间
     mstime_t now;
 
-    if (when < 0) return 0;                     // 该键没有设定过期时间
+    if (when < 0) return 0;                                         // 该键没有设定过期时间
 
-    if (server.loading) return 0;               // 服务器正在加载数据的时候，不要处理
+    if (server.loading) return 0;                                   // 服务器正在加载数据的时候，不要处理
 
-    now = server.lua_caller ? server.lua_time_start : mstime();// lua脚本相关
+    now = server.lua_caller ? server.lua_time_start : mstime();     // 获取当前时间，如果定义了lua脚本则使用lua脚本获取时间
 
-    if (server.masterhost != NULL) return now > when;// 主从复制相关，附属节点不主动删除key
+    if (server.masterhost != NULL) return now > when;               // 主从复制相关，附属节点不主动删除key
 
-    if (now <= when) return 0;                  // 该键还没有过期
+    if (now <= when) return 0;                                      // 该键还没有过期
 
-    server.stat_expiredkeys++;                  // 删除过期键
-    propagateExpire(db,key,server.lazyfree_lazy_expire);// 将删除命令传播到AOF文件和附属节点
+    server.stat_expiredkeys++;
+    propagateExpire(db,key,server.lazyfree_lazy_expire);            // 将删除命令传播到AOF文件和附属节点
     notifyKeyspaceEvent(NOTIFY_EXPIRED,
-        "expired",key,db->id);              // 发送键空间操作时间通知
+        "expired",key,db->id);                                // 发送键空间操作事件通知，Reactor模式
     return server.lazyfree_lazy_expire ? dbAsyncDelete(db,key) :
                                          dbSyncDelete(db,key);
 }
