@@ -626,7 +626,7 @@ struct evictionPoolEntry; /* Defined in evict.c */
  * | key3 | —— | client5 | -> | client6 |
  * 该字典结构的键为被监视的键，值为链表，保存监视该键的所有客户端
  */
-/**      数据库的结构     */
+//// 数据库的结构
 typedef struct redisDb {
     dict *dict;                 // 数据库的键空间
     dict *expires;              // 过期时间
@@ -895,6 +895,8 @@ struct clusterState;
 #define CHILD_INFO_TYPE_RDB 0
 #define CHILD_INFO_TYPE_AOF 1
 
+
+//// redis服务器结构
 struct redisServer {
     /* General */
     pid_t pid;                  /* Main process pid. */
@@ -902,7 +904,7 @@ struct redisServer {
     char *executable;           /* Absolute executable file path. */
     char **exec_argv;           /* Executable argv vector (copy). */
     int hz;                     /* serverCron() calls frequency in hertz */
-    redisDb *db;                                                                // 指向Redis的数据库
+    redisDb *db;                //// 一个数组，保存着服务器中的所有数据库
     dict *commands;             //// Command table
     dict *orig_commands;        //// Command table before command renaming. */
     aeEventLoop *el;            //// 事件循环
@@ -1005,7 +1007,7 @@ struct redisServer {
     int active_defrag_cycle_min;       /* minimal effort for defrag in CPU percentage */
     int active_defrag_cycle_max;       /* maximal effort for defrag in CPU percentage */
     size_t client_max_querybuf_len; //// Limit for client query buffer length
-    int dbnum;                                                                          // 表明数据库的数量
+    int dbnum;                      //// 表明数据库的数量，默认16
     int supervised;                 /* 1 if supervised, 0 otherwise. */
     int supervised_mode;            /* See SUPERVISED_* */
     int daemonize;                  /* True if running as a daemon */
