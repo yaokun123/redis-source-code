@@ -990,7 +990,8 @@ werr: /* Write error. */
     return C_ERR;
 }
 
-/**      在磁盘上保存rdb文件，如果出错返回C_ERR，反之C_O   */
+
+//// 在磁盘上保存rdb文件
 int rdbSave(char *filename, rdbSaveInfo *rsi) {
     char tmpfile[256];
     char cwd[MAXPATHLEN];                                       // 当前工作目录
@@ -1049,7 +1050,8 @@ werr:
     return C_ERR;
 }
 
-/**     真正执行BGSAVE的代码   */
+
+//// fork子进程来执行生成rdb文件
 int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
     pid_t childpid;
     long long start;
@@ -1989,7 +1991,7 @@ int rdbSaveToSlavesSockets(rdbSaveInfo *rsi) {
 }
 
 
-/**     SAVE命令的底层实现代码       */
+//// SAVE命令，阻塞方式生成rdb文件
 void saveCommand(client *c) {
     // 检查BGSAVE命令是否正在执行(BGSAVE是开一个进程来指定存储命令)
     if (server.rdb_child_pid != -1) {
@@ -2005,13 +2007,12 @@ void saveCommand(client *c) {
     }
 }
 
-/** BGSAVE 命令的底层实现代码  */
+//// BGSAVE命令，创建一个子进程来生成rdb文件
 void bgsaveCommand(client *c) {
     int schedule = 0;
 
     // schedule参数是为了避免服务器在执行AOF持久化的时候影响RDB持久化
-    // 于是向系统添加一个日程计划，使得服务器在定期事件中检查该参数和AOF持久化结束没
-    // 然后执行BGSAVE命令
+    // 于是向系统添加一个日程计划，使得服务器在定期事件中检查该参数和AOF持久化结束没，然后执行BGSAVE命令
     if (c->argc > 1) {
         if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr,"schedule")) {
             schedule = 1;
@@ -2029,7 +2030,7 @@ void bgsaveCommand(client *c) {
         if (schedule) {
             server.rdb_bgsave_scheduled = 1;
             addReplyStatus(c,"Background saving scheduled");
-        } else {
+        } else {// 如果没有scheduled则直接返回
             addReplyError(c,
                 "An AOF log rewriting in progress: can't BGSAVE right now. "
                 "Use BGSAVE SCHEDULE in order to schedule a BGSAVE whenever "
