@@ -41,7 +41,7 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
         return;
     }
     setKey(c->db,key,val);                                                   // 将键值对关联到数据库
-    server.dirty++;                                                          // 设定该数据库为脏
+    server.dirty++;                                                          // 修改从上次成功save/bgsave后，键的变化。
     if (expire) setExpire(c,c->db,key,mstime()+milliseconds);          // 设定过期时间
     notifyKeyspaceEvent(NOTIFY_STRING,"set",key,c->db->id);       // 发送事件通知
     if (expire) notifyKeyspaceEvent(NOTIFY_GENERIC,
