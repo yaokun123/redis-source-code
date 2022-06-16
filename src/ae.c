@@ -167,8 +167,7 @@ int aeGetFileEvents(aeEventLoop *eventLoop, int fd) {
 }
 
 
-
-
+//// 获取当前时间(秒/毫秒)
 static void aeGetTime(long *seconds, long *milliseconds)
 {
     struct timeval tv;
@@ -177,6 +176,7 @@ static void aeGetTime(long *seconds, long *milliseconds)
     *seconds = tv.tv_sec;
     *milliseconds = tv.tv_usec/1000;
 }
+
 
 /**     处理时间事件的执行时间（秒/毫秒）       */
 static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) {
@@ -350,8 +350,8 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             aeGetTime(&now_sec, &now_ms);       // 获取当前时间(秒/毫秒)
             tvp = &tv;
 
-            // 计算下一次时间事件准备好的时间
-            // 我们需要等待下一次事件触发多少毫秒
+            //// 计算下一次时间事件要执行的时间差，文件事件管理器（比如epoll_wait）要等待的时间
+            //// 不用担心这个时间差会太大，因为serverCron会每1ms执行一次
             long long ms =
                 (shortest->when_sec - now_sec)*1000 +
                 shortest->when_ms - now_ms;
@@ -405,7 +405,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
         }
     }
 
-    //// 处理时间事件，记住，此处说明Redis的文件事件优先于时间事件
+    //// 处理时间事件，此处说明Redis的文件事件优先于时间事件
     if (flags & AE_TIME_EVENTS)
         processed += processTimeEvents(eventLoop);
 
