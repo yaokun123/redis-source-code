@@ -1370,13 +1370,8 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     UNUSED(el);
     UNUSED(mask);
 
+    // 首先设置每次read读取的最大字节数readlen为REDIS_IOBUF_LEN(16k)
     readlen = PROTO_IOBUF_LEN;
-    /* If this is a multi bulk request, and we are processing a bulk reply
-     * that is large enough, try to maximize the probability that the query
-     * buffer contains exactly the SDS string representing the object, even
-     * at the risk of requiring more read(2) calls. This way the function
-     * processMultiBulkBuffer() can avoid copying buffers to create the
-     * Redis Object representing the argument. */
     if (c->reqtype == PROTO_REQ_MULTIBULK && c->multibulklen && c->bulklen != -1
         && c->bulklen >= PROTO_MBULK_BIG_ARG)
     {
@@ -1385,14 +1380,20 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
         if (remaining < readlen) readlen = remaining;
     }
 
+    // 得到输入缓存c->querybuf当前长度qblen，，也就是已接收到的客户端请求数据的长度
+    // 根据qblen更新c->querybuf_peak的值，该属性记录了输入缓存c->querybuf的最大长度
     qblen = sdslen(c->querybuf);
     if (c->querybuf_peak < qblen) c->querybuf_peak = qblen;
+
+    // 为c->querybuf扩容，使其能容纳readlen个字节
     c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);
+
+    // 调用read，最多读取readlen个字节。读取的内容追加到c->querybuf尾部。
     nread = read(fd, c->querybuf+qblen, readlen);
     if (nread == -1) {
-        if (errno == EAGAIN) {
+        if (errno == EAGAIN) {// 说明暂无数据
             return;
-        } else {
+        } else {// 记录错误信息到日志，释放客户端结构redisClient，并关闭链接
             serverLog(LL_VERBOSE, "Reading from client: %s",strerror(errno));
             freeClient(c);
             return;
@@ -1414,7 +1415,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     if (c->flags & CLIENT_MASTER) c->read_reploff += nread;
     server.stat_net_input_bytes += nread;
 
-    // 限制客户端发送长度
+    // 限制客户端发送长度（1G）
     if (sdslen(c->querybuf) > server.client_max_querybuf_len) {
         sds ci = catClientInfoString(sdsempty(),c), bytes = sdsempty();
 
@@ -1426,12 +1427,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
         return;
     }
 
-    /* Time to process the buffer. If the client is a master we need to
-     * compute the difference between the applied offset before and after
-     * processing the buffer, to understand how much of the replication stream
-     * was actually applied to the master state: this quantity, and its
-     * corresponding part of the replication stream, will be propagated to
-     * the sub-slaves and to the replication backlog. */
+
     if (!(c->flags & CLIENT_MASTER)) {
         processInputBuffer(c);      //// 从c->querybuf中解析客户端命令到c->argv/c->argc中
     } else {

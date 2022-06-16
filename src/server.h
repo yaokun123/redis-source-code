@@ -1010,7 +1010,7 @@ struct redisServer {
     int active_defrag_threshold_upper; /* maximum percentage of fragmentation at which we use maximum effort */
     int active_defrag_cycle_min;       /* minimal effort for defrag in CPU percentage */
     int active_defrag_cycle_max;       /* maximal effort for defrag in CPU percentage */
-    size_t client_max_querybuf_len; //// Limit for client query buffer length
+    size_t client_max_querybuf_len; //// 查询缓冲的最大值1G
     int dbnum;                      //// 表明数据库的数量，默认16
     int supervised;                 /* 1 if supervised, 0 otherwise. */
     int supervised_mode;            /* See SUPERVISED_* */
