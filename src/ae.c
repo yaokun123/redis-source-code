@@ -240,7 +240,8 @@ int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id)
     return AE_ERR; /* NO event with the specified ID found */
 }
 
-/**     获取最近的时间事件       */
+
+//// 获取最近的时间事件
 static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
 {
     aeTimeEvent *te = eventLoop->timeEventHead;                     // 取出时间事件单链表的头部地址
@@ -321,7 +322,8 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
     return processed;
 }
 
-/**     事件处理函数      */
+
+//// 文件事件/事件事件 处理函数，redis主进程循环执行该函数
 int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 {
     int processed = 0, numevents;
@@ -376,7 +378,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             }
         }
 
-        // 调用I/O复用函数获取已准备好的事件
+        //// 调用I/O复用函数获取已准备好的事件
         numevents = aeApiPoll(eventLoop, tvp);
 
         // 回调函数
@@ -406,7 +408,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
         }
     }
 
-    // 处理时间事件，记住，此处说明Redis的文件事件优先于时间事件
+    //// 处理时间事件，记住，此处说明Redis的文件事件优先于时间事件
     if (flags & AE_TIME_EVENTS)
         processed += processTimeEvents(eventLoop);
 
@@ -435,7 +437,7 @@ int aeWait(int fd, int mask, long long milliseconds) {
     }
 }
 
-/**     事件循环主函数     */
+//// 事件循环主函数，在server.c的main函数中调用，redis主进程最终是在循环执行事件
 void aeMain(aeEventLoop *eventLoop) {
     eventLoop->stop = 0;    // 开启事件循环
     while (!eventLoop->stop) {
@@ -447,14 +449,17 @@ void aeMain(aeEventLoop *eventLoop) {
     }
 }
 
+//// 返回io多路复用器的名称
 char *aeGetApiName(void) {
     return aeApiName();
 }
 
+//// 设置beforesleep
 void aeSetBeforeSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *beforesleep) {
     eventLoop->beforesleep = beforesleep;
 }
 
+//// 设置aftersleep
 void aeSetAfterSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *aftersleep) {
     eventLoop->aftersleep = aftersleep;
 }
