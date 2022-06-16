@@ -999,7 +999,7 @@ struct redisServer {
     /* Configuration */
     int verbosity;                  /* Loglevel in redis.conf */
     int maxidletime;                /* Client timeout in seconds */
-    int tcpkeepalive;               /* Set SO_KEEPALIVE if non-zero. */
+    int tcpkeepalive;               //// 是否开启长链接
     int active_expire_enabled;      /* Can be disabled for testing purposes. */
     int active_defrag_enabled;
     size_t active_defrag_ignore_bytes; /* minimum amount of fragmentation waste to start active defrag */

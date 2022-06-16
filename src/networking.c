@@ -67,7 +67,7 @@ int listMatchObjects(void *a, void *b) {
     return equalStringObjects(a,b);
 }
 
-/**     根据cfd客户端连接套接字，创建一个client结构体     */
+//// 根据客户端连接套接字fd，创建一个client结构体
 client *createClient(int fd) {
     client *c = zmalloc(sizeof(client));        // 分配空间
 
