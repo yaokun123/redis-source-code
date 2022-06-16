@@ -2118,6 +2118,9 @@ void call(client *c, int flags) {
 
 
 
+    //// 执行完相应的命令处理函数之后，就会调用addReply类的函数将要回复给客户端的信息写入客户端输出缓存。
+    //// 这些函数包括addReply，addReplySds，addReplyError，addReplyStatus
+    //// 这些函数首先都会调用prepareClientToWrite函数，注册socket描述符上的可写事件，然后将回复信息写入到客户端输出缓存中。
     c->cmd->proc(c);            //// 执行命令
 
 
@@ -2217,7 +2220,7 @@ void call(client *c, int flags) {
     server.stat_numcommands++;
 }
 
-/**      执行命令       */
+//// 执行命令
 int processCommand(client *c) {
     // c->argv[0]->ptr就是命令例如set/get/lpush等。。。
     if (!strcasecmp(c->argv[0]->ptr,"quit")) {  // 如果是退出命令

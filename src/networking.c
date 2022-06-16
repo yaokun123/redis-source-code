@@ -144,63 +144,32 @@ client *createClient(int fd) {
     return c;
 }
 
-/* This function is called every time we are going to transmit new data
- * to the client. The behavior is the following:
- *
- * If the client should receive new data (normal clients will) the function
- * returns C_OK, and make sure to install the write handler in our event
- * loop so that when the socket is writable new data gets written.
- *
- * If the client should not receive new data, because it is a fake client
- * (used to load AOF in memory), a master or because the setup of the write
- * handler failed, the function returns C_ERR.
- *
- * The function may return C_OK without actually installing the write
- * event handler in the following cases:
- *
- * 1) The event handler should already be installed since the output buffer
- *    already contains something.
- * 2) The client is a slave but not yet online, so we want to just accumulate
- *    writes in the buffer but not actually sending them yet.
- *
- * Typically gets called every time a reply is built, before adding more
- * data to the clients output buffers. If the function returns C_ERR no
- * data should be appended to the output buffers. */
+
 int prepareClientToWrite(client *c) {
-    /* If it's the Lua client we always return ok without installing any
-     * handler since there is no socket at all. */
+
+    // 如果当前客户端是Lua客户端，直接返回REDIS_OK，而无需注册socket描述符上的可写事件，因为根本没有socket描述符；
     if (c->flags & (CLIENT_LUA|CLIENT_MODULE)) return C_OK;
 
     /* CLIENT REPLY OFF / SKIP handling: don't send replies. */
     if (c->flags & (CLIENT_REPLY_OFF|CLIENT_REPLY_SKIP)) return C_ERR;
 
-    /* Masters don't receive replies, unless CLIENT_MASTER_FORCE_REPLY flag
-     * is set. */
+    // 如果客户端为Master节点，除非设置REDIS_MASTER_FORCE_REPLY标志，否则这种客户端不接收回复，因此直接返回REDIS_ERR；
     if ((c->flags & CLIENT_MASTER) &&
         !(c->flags & CLIENT_MASTER_FORCE_REPLY)) return C_ERR;
 
+    //  如果客户端的socket描述符小于等于0，说明是加载AOF文件时的伪客户端，直接返回REDIS_ERR；
     if (c->fd <= 0) return C_ERR; /* Fake client for AOF loading. */
 
-    /* Schedule the client to write the output buffers to the socket only
-     * if not already done (there were no pending writes already and the client
-     * was yet not flagged), and, for slaves, if the slave can actually
-     * receive writes at this stage. */
+
     if (!clientHasPendingReplies(c) &&
         !(c->flags & CLIENT_PENDING_WRITE) &&
         (c->replstate == REPL_STATE_NONE ||
          (c->replstate == SLAVE_STATE_ONLINE && !c->repl_put_online_on_ack)))
     {
-        /* Here instead of installing the write handler, we just flag the
-         * client and put it into a list of clients that have something
-         * to write to the socket. This way before re-entering the event
-         * loop, we can try to directly write to the client sockets avoiding
-         * a system call. We'll only really install the write handler if
-         * we'll not be able to write the whole reply at once. */
         c->flags |= CLIENT_PENDING_WRITE;
         listAddNodeHead(server.clients_pending_write,c);
     }
 
-    /* Authorize the caller to queue in the output buffer of this client. */
     return C_OK;
 }
 
@@ -311,18 +280,17 @@ void _addReplyStringToList(client *c, const char *s, size_t len) {
  * Higher level functions to queue data on the client output buffer.
  * The following functions are the ones that commands implementations will call.
  * -------------------------------------------------------------------------- */
-
+//// 回复客户端系列函数
 void addReply(client *c, robj *obj) {
+
+    // 注册socket描述符上的可写事件。（老版本）
     if (prepareClientToWrite(c) != C_OK) return;
 
-    /* This is an important place where we can avoid copy-on-write
-     * when there is a saving child running, avoiding touching the
-     * refcount field of the object if it's not needed.
-     *
-     * If the encoding is RAW and there is room in the static buffer
-     * we'll be able to send the object to the client without
-     * messing with its page. */
+
     if (sdsEncodedObject(obj)) {
+        // 调用函数_addReplyToBuffer向c->buf中添加数据，如果该函数返回REDIS_ERR，说明添加失败，
+        // 则调用_addReplyStringToList，将数据添加到c->reply中。
+        // 其他addReply类的函数也是类似的处理，不再赘述。
         if (_addReplyToBuffer(c,obj->ptr,sdslen(obj->ptr)) != C_OK)
             _addReplyObjectToList(c,obj);
     } else if (obj->encoding == OBJ_ENCODING_INT) {
@@ -1298,34 +1266,36 @@ int processMultibulkBuffer(client *c) {
     return C_ERR;
 }
 
-// 从c->querybuf中解析客户端命令，执行命令
+//// 从c->querybuf中解析客户端命令，执行命令
 void processInputBuffer(client *c) {
     server.current_client = c;
 
     // 按照RESP协议解析字符串
     while(sdslen(c->querybuf)) {
-        /* Return if clients are paused. */
+
+        // 首先，根据客户端的当前状态标志c->flags，判断是否需要继续解析处理
+
+        // 如果当前客户端不是SLAVE节点，并且客户端处于阻塞状态，则直接返回；
         if (!(c->flags & CLIENT_SLAVE) && clientsArePaused()) break;
 
-        /* Immediately abort if the client is in the middle of something. */
+        // 如果客户端标志c->flags包含REDIS_BLOCKED，则直接返回；
         if (c->flags & CLIENT_BLOCKED) break;
 
-        /* CLIENT_CLOSE_AFTER_REPLY closes the connection once the reply is
-         * written to the client. Make sure to not let the reply grow after
-         * this flag has been set (i.e. don't process more commands).
-         *
-         * The same applies for clients we want to terminate ASAP. */
+        // 如果客户端标志c->flags包含REDIS_CLOSE_AFTER_REPLY，则直接返回。该标志表明发生了异常，服务器不再需要处理客户端请求，在回复客户端错误消息后直接关闭链接。
         if (c->flags & (CLIENT_CLOSE_AFTER_REPLY|CLIENT_CLOSE_ASAP)) break;
 
-        /* Determine request type when unknown. */
+        // 如果c->reqtype为0，说明刚要开始处理一条请求（第一次处理c->querybuf中的数据，或刚处理完一条完整的命令请求））
         if (!c->reqtype) {
+            // 如果数据c->querybuf的首字节为'*'，说明该请求会跨越多行（包含多个”\r\n”）
             if (c->querybuf[0] == '*') {
                 c->reqtype = PROTO_REQ_MULTIBULK;
             } else {
+                // 否则说明该请求为单行请求
                 c->reqtype = PROTO_REQ_INLINE;
             }
         }
 
+        // 这两个函数的返回值如果不是REDIS_OK，则说明尚未收到一条完整的请求，需要退出循环，函数返回后接着读取剩余的数据
         if (c->reqtype == PROTO_REQ_INLINE) {
             if (processInlineBuffer(c) != C_OK) break;
         } else if (c->reqtype == PROTO_REQ_MULTIBULK) {
@@ -1334,11 +1304,10 @@ void processInputBuffer(client *c) {
             serverPanic("Unknown request type");
         }
 
-        /* Multibulk processing could see a <= 0 length. */
+        // 如果这两个函数返回为REDIS_OK，则说明已经收到并解析好了一条完整的请求，命令的参数已经分解到数组c->argv中，c->argc表示参数个数
         if (c->argc == 0) {
             resetClient(c);
         } else {
-            /* Only reset the client when the command was executed. */
             //// 执行命令
             if (processCommand(c) == C_OK) {
                 if (c->flags & CLIENT_MASTER && !(c->flags & CLIENT_MULTI)) {
