@@ -250,8 +250,7 @@ static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
     // 循环遍历时间事件链表，找出最近要执行的事件
     while(te) {
         if (!nearest || te->when_sec < nearest->when_sec ||
-                (te->when_sec == nearest->when_sec &&
-                 te->when_ms < nearest->when_ms))
+                (te->when_sec == nearest->when_sec && te->when_ms < nearest->when_ms))
             nearest = te;
         te = te->next;
     }
@@ -345,8 +344,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 
 
         if (shortest) {
-            // 运行到这里说明时间事件存在，则根据最近可执行时间事件和现在的时间的时间差
-            // 来决定文件事件的阻塞事件
+            //// 运行到这里说明最近需要执行的时间事件存在，则根据最近可执行时间事件和现在的时间的时间差来决定
             long now_sec, now_ms;
 
             aeGetTime(&now_sec, &now_ms);       // 获取当前时间(秒/毫秒)
@@ -367,8 +365,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
                 tvp->tv_usec = 0;
             }
         } else {
-            // 执行到这里，说明没有待处理的时间事件
-            // 此时根据AE_DONT_WAIT参数来决定是否设置阻塞和阻塞的时间
+            //// 执行到这里，说明没有待处理的时间事件，此时根据AE_DONT_WAIT参数来决定是否设置阻塞和阻塞的时间
             if (flags & AE_DONT_WAIT) {
                 tv.tv_sec = tv.tv_usec = 0;
                 tvp = &tv;
