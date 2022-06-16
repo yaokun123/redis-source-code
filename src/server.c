@@ -1400,7 +1400,7 @@ void initServerConfig(void) {
 
 
 
-    // 映射命令到方法
+    //// 映射命令到方法
     populateCommandTable();
 
 
