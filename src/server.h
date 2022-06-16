@@ -711,7 +711,7 @@ typedef struct client {
     int multibulklen;       //// 剩余未读取的命令内容数量
     long bulklen;           //// 命令内容的长度
 
-    list *reply;            //// 回复链表
+    list *reply;            //// 可变大小缓冲区，当buf数组使用完毕或回复太大放不进去 的时候使用
     unsigned long long reply_bytes; //// 回复链表中对象的总大小
     size_t sentlen;         //// 已发送字节，处理 short write 用
     time_t ctime;           //// 创建客户端的时间
@@ -748,6 +748,7 @@ typedef struct client {
     sds peerid;             /* Cached peer ID. */
 
     /* Response buffer */
+    //// 固定大小缓冲区
     int bufpos;                        //// 回复缓冲区已使用大小
     char buf[PROTO_REPLY_CHUNK_BYTES];//// 回复缓冲区
 } client;
@@ -908,7 +909,7 @@ struct redisServer {
     char **exec_argv;           /* Executable argv vector (copy). */
     int hz;                     /* serverCron() calls frequency in hertz */
     redisDb *db;                //// 一个数组，保存着服务器中的所有数据库
-    dict *commands;             //// Command table
+    dict *commands;             //// 命令表
     dict *orig_commands;        //// Command table before command renaming. */
     aeEventLoop *el;            //// 事件循环
     unsigned int lruclock;      /* Clock for LRU eviction */
