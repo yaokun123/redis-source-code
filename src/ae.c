@@ -134,7 +134,8 @@ int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
     return AE_OK;
 }
 
-/**     删除文件事件      */
+
+//// 删除文件事件
 void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
 {
     if (fd >= eventLoop->setsize) return;               // 如果传入的文件描述符超过监听的最大文件描述符，就没必要再删除了。直接返回
@@ -156,13 +157,17 @@ void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
     }
 }
 
-/**     根据文件描述符获取文件事件（读/写/无）        */
+
+//// 根据文件描述符获取文件事件（读/写/无）
 int aeGetFileEvents(aeEventLoop *eventLoop, int fd) {
     if (fd >= eventLoop->setsize) return 0;             // 校验文件描述符有没有超过事件循环监听的最大文件描述符
     aeFileEvent *fe = &eventLoop->events[fd];           // 根据文件描述符，取出文件事件
 
     return fe->mask;                                    // 返回文件事件的事件标记，读、写、NONE
 }
+
+
+
 
 static void aeGetTime(long *seconds, long *milliseconds)
 {
