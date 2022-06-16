@@ -607,7 +607,7 @@ int clientHasPendingReplies(client *c) {
 
 #define MAX_ACCEPTS_PER_CALL 1000       // 默认的最大连接请求个数
 
-// 对cfd客户端连接套接字进行封装，加入文件事件循环等
+//// 对cfd客户端连接套接字进行封装，加入文件事件循环等
 static void acceptCommonHandler(int fd, int flags, char *ip) {
     client *c;
 
@@ -678,7 +678,7 @@ static void acceptCommonHandler(int fd, int flags, char *ip) {
     c->flags |= flags;
 }
 
-// 监听redis服务端 tcp套接字(ipv4/ipv6) 可读时会调用该函数
+//// 监听redis服务端 tcp套接字(ipv4/ipv6) 可读时会调用该函数
 // 创建客户端连接
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     int cport, cfd, max = MAX_ACCEPTS_PER_CALL;     // 默认最大接受客户端10000个连接
