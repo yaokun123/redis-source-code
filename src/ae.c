@@ -104,10 +104,12 @@ void aeStop(aeEventLoop *eventLoop) {
     eventLoop->stop = 1;
 }
 
-/**     创建文件事件      */
+//// 创建文件事件
 // 关于文件事件，有两个地方需要创建它
 // 1、初始化服务器的时候，需要监听新的客户连接           server.c/initServer ->  acceptTcpHandler操作函数
 // 2、在客户连接服务器之后，需要监听该客户的读写事件      etWorking.c/createClient  ->  readQueryFromClient操作函数
+// 3、aof重写时候父子进程间使用管道通信                aof.c/aofCreatePipes  -> aofChildPipeReadable操作函数
+// 4、aof                                        aof.c/aofRewriteBufferAppend -> aofChildWriteDiffData操作函数
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData)
 {

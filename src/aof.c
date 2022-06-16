@@ -77,7 +77,7 @@ void aofChildWriteDiffData(aeEventLoop *el, int fd, void *privdata, int mask) {
             block->free += nwritten;
         }
 
-        // 节点数据转移完毕知之后就释放节点
+        // 节点数据转移完毕之后就释放节点
         if (block->used == 0) listDelNode(server.aof_rewrite_buf_blocks,ln);
     }
 }
