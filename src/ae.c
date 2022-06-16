@@ -74,7 +74,7 @@ int aeGetSetSize(aeEventLoop *eventLoop) {
 }
 
 
-//// 扩容当前事件循环的setsize
+//// 扩容/缩容 当前事件循环的setsize
 int aeResizeSetSize(aeEventLoop *eventLoop, int setsize) {
     int i;
 
