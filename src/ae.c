@@ -257,7 +257,8 @@ static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
     return nearest;
 }
 
-/**     处理时间事件      */
+
+//// 处理时间事件
 static int processTimeEvents(aeEventLoop *eventLoop) {
     int processed = 0;
     aeTimeEvent *te, *prev;
@@ -282,7 +283,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
         long long id;
 
         /* Remove events scheduled for deletion. */
-        if (te->id == AE_DELETED_EVENT_ID) {// 时间事件已经被处理
+        if (te->id == AE_DELETED_EVENT_ID) {// 时间事件已经被删除，删除时间时间节点
             aeTimeEvent *next = te->next;
             if (prev == NULL)
                 eventLoop->timeEventHead = te->next;
@@ -296,22 +297,29 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
         }
 
 
+        // 跳过无效事件
         if (te->id > maxId) {
             te = te->next;
             continue;
         }
         aeGetTime(&now_sec, &now_ms);
+
+        // 如果当前时间等于或等于事件的执行时间，那么说明事件已到达，执行这个事件
         if (now_sec > te->when_sec ||
             (now_sec == te->when_sec && now_ms >= te->when_ms))
         {
             int retval;
 
             id = te->id;
-            retval = te->timeProc(eventLoop, id, te->clientData);   // 处理
+            retval = te->timeProc(eventLoop, id, te->clientData);   //// 处理时间事件
             processed++;
+
+            //// 记录是否有需要循环执行这个事件时间
             if (retval != AE_NOMORE) {
+                // 是的， retval 毫秒之后继续执行这个时间事件
                 aeAddMillisecondsToNow(retval,&te->when_sec,&te->when_ms);
             } else {
+                // 不，将这个事件删除
                 te->id = AE_DELETED_EVENT_ID;
             }
         }
