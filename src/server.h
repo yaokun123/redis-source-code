@@ -1032,13 +1032,13 @@ struct redisServer {
 
     //// AOF 重写相关操作
     off_t aof_rewrite_min_size;     //// 用于开启重写机制的AOF文件大小的阈值
-    off_t aof_rewrite_base_size;    //// 表示上一次执行aof重写后的aod大小
+    off_t aof_rewrite_base_size;    //// 表示上一次执行aof重写后的aof的大小
     int aof_rewrite_perc;           //// 这个字段用于处理当AOF文件大小超过aof_rewrite_base_size的百分比，如果超过阈值，那么将开启重写机制。
     int aof_rewrite_scheduled;      //// 是一个调度标记，BGREWRITEAOF命令并不会立即启动重写机制，而是设置好aof_rewrite_scheduled，在下一次心跳中去启动该机制
 
     int aof_no_fsync_on_rewrite;    /* Don't fsync if a rewrite is in prog. */
     pid_t aof_child_pid;            //// aof重写子进程id
-    list *aof_rewrite_buf_blocks;   //// aof重写缓冲区
+    list *aof_rewrite_buf_blocks;   //// aof重写缓冲区（aof重写是命令不仅会写到aof_buf中还会写入aof_rewrite_buf_blocks中）
     time_t aof_rewrite_time_last;   //// 记录最后一次aof重写耗时
     time_t aof_rewrite_time_start;  //// 记录aof开始重写的时间（默认-1）
     int aof_lastbgrewrite_status;   /* C_OK or C_ERR */
