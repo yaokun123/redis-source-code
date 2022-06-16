@@ -1039,14 +1039,16 @@ struct redisServer {
     int aof_no_fsync_on_rewrite;    /* Don't fsync if a rewrite is in prog. */
     pid_t aof_child_pid;            //// aof重写子进程id
     list *aof_rewrite_buf_blocks;   //// aof重写缓冲区
-    time_t aof_rewrite_time_last;   /* Time used by last AOF rewrite run. */
-    time_t aof_rewrite_time_start;  /* Current AOF rewrite start time. */
+    time_t aof_rewrite_time_last;   //// 记录最后一次aof重写耗时
+    time_t aof_rewrite_time_start;  //// 记录aof开始重写的时间（默认-1）
     int aof_lastbgrewrite_status;   /* C_OK or C_ERR */
     unsigned long aof_delayed_fsync;  /* delayed AOF fsync() counter */
     int aof_rewrite_incremental_fsync;//// fsync incrementally while rewriting?
     int aof_last_write_errno;       /* Valid if aof_last_write_status is ERR */
     int aof_load_truncated;         /* Don't stop on unexpected AOF EOF. */
     int aof_use_rdb_preamble;       //// Use RDB preamble on AOF rewrites. */
+
+
     /* AOF pipes used to communicate between parent and child during rewrite. */
     int aof_pipe_write_data_to_child;               //// aof父子间匿名管道通信
     int aof_pipe_read_data_from_parent;            //// aof父子间匿名管道通信
