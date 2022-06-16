@@ -1362,7 +1362,7 @@ void processInputBuffer(client *c) {
     server.current_client = NULL;
 }
 
-// 客户端连接套接字可读时会调用
+//// 客户端连接套接字可读时会调用
 void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     client *c = (client*) privdata;
     int nread, readlen;
