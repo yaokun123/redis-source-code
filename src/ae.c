@@ -178,7 +178,7 @@ static void aeGetTime(long *seconds, long *milliseconds)
 }
 
 
-/**     处理时间事件的执行时间（秒/毫秒）       */
+//// 处理时间事件的执行时间（秒/毫秒）
 static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) {
     long cur_sec, cur_ms, when_sec, when_ms;
 
@@ -195,10 +195,8 @@ static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) 
     *ms = when_ms;
 }
 
-/**     创建时间事件      */
-// 关于时间事件，Redis在初始化服务器的时候就会创建，前面我们提到的AOF和RDB持久化以及过期键的处理等操作中，都涉及到定时操作，
-// 时间事件就是为了这些定时操作而设定的，在特定的时间触发时间事件，并进行相应的处理。
-// server.c/initServer  ->  serverCron操作函数
+
+//// 创建时间事件     server.c/initServer  ->  serverCron操作函数
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc)
@@ -224,7 +222,9 @@ long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
     return id;
 }
 
-/**     删除时间事件      */
+
+//// 根据创建时间事件时返回的唯一id，删除时间事件
+// 该方法在redis中没有使用
 int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id)
 {
     aeTimeEvent *te = eventLoop->timeEventHead;     // 取出时间事件单链表的头部地址
