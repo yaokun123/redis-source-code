@@ -139,7 +139,7 @@ client *createClient(int fd) {
     c->peerid = NULL;
     listSetFreeMethod(c->pubsub_patterns,decrRefCountVoid);
     listSetMatchMethod(c->pubsub_patterns,listMatchObjects);
-    if (fd != -1) listAddNodeTail(server.clients,c);
+    if (fd != -1) listAddNodeTail(server.clients,c);    //// 将新创建的客户端加到server.clients双向链表的尾部
     initClientMultiState(c);
     return c;
 }

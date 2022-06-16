@@ -696,9 +696,9 @@ typedef struct readyList {
 //// 客户端的结构体
 typedef struct client {
     uint64_t id;            /* Client incremental unique ID. */
-    int fd;                 //// 客户端的文件描述符
+    int fd;                 //// 客户端的文件描述符，可以是大于-1的整数 或者 -1（伪客户端处理的命令请求来源于AOF文件或者Lua脚本，而不是网络）
     redisDb *db;            //// 记录客户端当前正在使用的数据库
-    robj *name;             //// 客户端的名字
+    robj *name;             //// 客户端的名字（默认是没有名字的）
     sds querybuf;           //// 查询缓冲区
     sds pending_querybuf;   /* If this is a master, this buffer represents the
                                yet not applied replication stream that we
@@ -717,7 +717,7 @@ typedef struct client {
     time_t ctime;           //// 创建客户端的时间
     time_t lastinteraction; //// 客户端最后一次和服务器互动的时间
     time_t obuf_soft_limit_reached_time;//// 客户端的输出缓冲区超过软性限制的时间
-    int flags;              //// 客户端状态标志
+    int flags;              //// 客户端的标志属性，记录了客户端的角色（role），以及客户端目前所处的状态
     int authenticated;      //// 代表认证的状态，0 代表未认证， 1 代表已认证
 
     int replstate;          //// 复制状态
@@ -941,7 +941,7 @@ struct redisServer {
     int sofd;                               //// Unix socket file descriptor
     int cfd[CONFIG_BINDADDR_MAX];/* Cluster bus listening socket */
     int cfd_count;              /* Used slots in cfd[] */
-    list *clients;              //// List of active clients
+    list *clients;              //// 正常状态下的客户端链表
     list *clients_to_close;     /* Clients to close asynchronously */
     list *clients_pending_write; //// There is to write or install handler. */
     list *slaves, *monitors;    /* List of slaves and MONITORs */
