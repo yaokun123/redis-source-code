@@ -30,26 +30,30 @@
     #endif
 #endif
 
-/**     创建事件循环结构体       */
+//// 创建事件循环结构体，在server.c的initServer中调用
 aeEventLoop *aeCreateEventLoop(int setsize) {
     aeEventLoop *eventLoop;
     int i;
 
     if ((eventLoop = zmalloc(sizeof(*eventLoop))) == NULL) goto err;
-    eventLoop->events = zmalloc(sizeof(aeFileEvent)*setsize);
-    eventLoop->fired = zmalloc(sizeof(aeFiredEvent)*setsize);
+    eventLoop->events = zmalloc(sizeof(aeFileEvent)*setsize);   // 保存要使用的文件事件
+    eventLoop->fired = zmalloc(sizeof(aeFiredEvent)*setsize);   // 保存已准备好，待处理的文件事件
     if (eventLoop->events == NULL || eventLoop->fired == NULL) goto err;
-    eventLoop->setsize = setsize;
-    eventLoop->lastTime = time(NULL);
-    eventLoop->timeEventHead = NULL;
-    eventLoop->timeEventNextId = 0;
-    eventLoop->stop = 0;
-    eventLoop->maxfd = -1;
+
+    eventLoop->setsize = setsize;                                   // 需要监听的描述符个数
+    eventLoop->lastTime = time(NULL);                               // 上一次事件循环的时间，用于检测系统时间是否变更
+    eventLoop->timeEventHead = NULL;                                // 时间事件头，因为事件时间其实是一个链表
+    eventLoop->timeEventNextId = 0;                                 // 下一个时间事件的id，用于生成时间事件的唯一标识
+    eventLoop->stop = 0;                                            // 停止标识，1表示停止
+    eventLoop->maxfd = -1;                                          // 当前注册的最大描述符
+
     eventLoop->beforesleep = NULL;
     eventLoop->aftersleep = NULL;
-    if (aeApiCreate(eventLoop) == -1) goto err;
-    /* Events with mask == AE_NONE are not set. So let's initialize the
-     * vector with it. */
+
+
+    if (aeApiCreate(eventLoop) == -1) goto err;                     // 初始化文件事件管理器（比如epoll_create）
+
+    // 初始文件事件的存储空间，将事件类型置为0
     for (i = 0; i < setsize; i++)
         eventLoop->events[i].mask = AE_NONE;
     return eventLoop;
@@ -63,18 +67,14 @@ err:
     return NULL;
 }
 
-/* Return the current set size. */
+
+//// 返回当前事件循环的setsize
 int aeGetSetSize(aeEventLoop *eventLoop) {
     return eventLoop->setsize;
 }
 
-/* Resize the maximum set size of the event loop.
- * If the requested set size is smaller than the current set size, but
- * there is already a file descriptor in use that is >= the requested
- * set size minus one, AE_ERR is returned and the operation is not
- * performed at all.
- *
- * Otherwise AE_OK is returned and the operation is successful. */
+
+//// 扩容当前事件循环的setsize
 int aeResizeSetSize(aeEventLoop *eventLoop, int setsize) {
     int i;
 
@@ -93,6 +93,8 @@ int aeResizeSetSize(aeEventLoop *eventLoop, int setsize) {
     return AE_OK;
 }
 
+
+//// 删除事件循环
 void aeDeleteEventLoop(aeEventLoop *eventLoop) {
     aeApiFree(eventLoop);
     zfree(eventLoop->events);
@@ -100,6 +102,8 @@ void aeDeleteEventLoop(aeEventLoop *eventLoop) {
     zfree(eventLoop);
 }
 
+
+//// 停止事件循环
 void aeStop(aeEventLoop *eventLoop) {
     eventLoop->stop = 1;
 }
@@ -113,17 +117,17 @@ void aeStop(aeEventLoop *eventLoop) {
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData)
 {
-    if (fd >= eventLoop->setsize) {                 // 超出监听的描述符个数，直接返回
+    if (fd >= eventLoop->setsize) {                 // 超出监听的描述符个数，返回错误
         errno = ERANGE;
         return AE_ERR;
     }
     aeFileEvent *fe = &eventLoop->events[fd];       // 注册文件事件使用文件描述符作为数组索引
 
-    if (aeApiAddEvent(eventLoop, fd, mask) == -1)   // 向系统注册事件
+    if (aeApiAddEvent(eventLoop, fd, mask) == -1)   // 向系统注册事件，调用redis封装好的多路复用io管理器（比如加入到epool_ctl）
         return AE_ERR;
     fe->mask |= mask;                               // 设置文件事件的事件标记，读or写
-    if (mask & AE_READABLE) fe->rfileProc = proc;   // 设置事件处理函数
-    if (mask & AE_WRITABLE) fe->wfileProc = proc;
+    if (mask & AE_READABLE) fe->rfileProc = proc;   // 设置文件事件的处理函数 - 读
+    if (mask & AE_WRITABLE) fe->wfileProc = proc;   // 设置文件事件的处理函数 - 写
     fe->clientData = clientData;
     if (fd > eventLoop->maxfd)
         eventLoop->maxfd = fd;                      // 更新监听的最大文件描述符
