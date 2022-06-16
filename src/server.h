@@ -698,33 +698,35 @@ typedef struct client {
     uint64_t id;            /* Client incremental unique ID. */
     int fd;                 //// 客户端的文件描述符
     redisDb *db;            //// 记录客户端当前正在使用的数据库
-    robj *name;             /* As set by CLIENT SETNAME. */
-    sds querybuf;           //// Buffer we use to accumulate client queries. */
+    robj *name;             //// 客户端的名字
+    sds querybuf;           //// 查询缓冲区
     sds pending_querybuf;   /* If this is a master, this buffer represents the
                                yet not applied replication stream that we
                                are receiving from the master. */
-    size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size. */
-    int argc;                                                                   // 参数个数
-    robj **argv;                                                                // 命令参数
-    struct redisCommand *cmd, *lastcmd;  /* Last command executed. */
-    int reqtype;            //// Request protocol type: PROTO_REQ_*
-    int multibulklen;       //// Number of multi bulk arguments left to read
-    long bulklen;           //// Length of bulk argument in multi bulk request. */
-    list *reply;            /* List of reply objects to send to the client. */
-    unsigned long long reply_bytes; /* Tot bytes of objects in reply list. */
-    size_t sentlen;         /* Amount of bytes already sent in the current
-                               buffer or object being sent. */
-    time_t ctime;           /* Client creation time. */
-    time_t lastinteraction; /* Time of the last interaction, used for timeout */
-    time_t obuf_soft_limit_reached_time;
-    int flags;              /* Client flags: CLIENT_* macros. */
-    int authenticated;      //// When requirepass is non-NULL
-    int replstate;          /* Replication state if this is a slave. */
+    size_t querybuf_peak;   //// 查询缓冲区长度峰值
+    int argc;               //// 参数个数
+    robj **argv;            //// 参数对象数组
+    struct redisCommand *cmd, *lastcmd;  //// 记录被客户端执行的命令
+    int reqtype;            //// 请求的类型：内联命令还是多条命令
+    int multibulklen;       //// 剩余未读取的命令内容数量
+    long bulklen;           //// 命令内容的长度
+
+    list *reply;            //// 回复链表
+    unsigned long long reply_bytes; //// 回复链表中对象的总大小
+    size_t sentlen;         //// 已发送字节，处理 short write 用
+    time_t ctime;           //// 创建客户端的时间
+    time_t lastinteraction; //// 客户端最后一次和服务器互动的时间
+    time_t obuf_soft_limit_reached_time;//// 客户端的输出缓冲区超过软性限制的时间
+    int flags;              //// 客户端状态标志
+    int authenticated;      //// 代表认证的状态，0 代表未认证， 1 代表已认证
+
+    int replstate;          //// 复制状态
     int repl_put_online_on_ack; /* Install slave write handler on ACK. */
-    int repldbfd;           /* Replication DB file descriptor. */
-    off_t repldboff;        /* Replication DB file offset. */
-    off_t repldbsize;       /* Replication DB file size. */
+    int repldbfd;           //// 用于保存主服务器传来的 RDB 文件的文件描述符
+    off_t repldboff;        //// 读取主服务器传来的 RDB 文件的偏移量
+    off_t repldbsize;       //// 主服务器传来的 RDB 文件的大小
     sds replpreamble;       /* Replication DB preamble. */
+
     long long read_reploff; /* Read replication offset if this is a master. */
     long long reploff;      /* Applied replication offset if this is a master. */
     long long repl_ack_off; /* Replication ack offset, if this is a slave. */
@@ -736,18 +738,18 @@ typedef struct client {
     int slave_listening_port; /* As configured with: SLAVECONF listening-port */
     char slave_ip[NET_IP_STR_LEN]; /* Optionally given by REPLCONF ip-address */
     int slave_capa;         /* Slave capabilities: SLAVE_CAPA_* bitwise OR. */
-    multiState mstate;      //// 开启事务，存放命令的地方
-    int btype;              /* Type of blocking op if CLIENT_BLOCKED. */
-    blockingState bpop;     /* blocking state */
-    long long woff;         /* Last write global replication offset. */
-    list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */
+    multiState mstate;      //// 事务状态
+    int btype;              //// 阻塞类型
+    blockingState bpop;     //// 阻塞状态
+    long long woff;         //// 最后被写入的全局复制偏移量
+    list *watched_keys;     //// 被监视的键
     dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
     list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
     sds peerid;             /* Cached peer ID. */
 
     /* Response buffer */
-    int bufpos;
-    char buf[PROTO_REPLY_CHUNK_BYTES];
+    int bufpos;                        //// 回复偏移量
+    char buf[PROTO_REPLY_CHUNK_BYTES];//// 回复缓冲区
 } client;
 
 struct saveparam {
