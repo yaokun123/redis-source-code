@@ -696,7 +696,7 @@ typedef struct readyList {
 //// 客户端的结构体
 typedef struct client {
     uint64_t id;            /* Client incremental unique ID. */
-    int fd;                 /* Client socket. */
+    int fd;                 //// 客户端的文件描述符
     redisDb *db;            //// 记录客户端当前正在使用的数据库
     robj *name;             /* As set by CLIENT SETNAME. */
     sds querybuf;           //// Buffer we use to accumulate client queries. */
