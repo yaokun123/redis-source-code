@@ -23,7 +23,7 @@ void *listPopSaver(unsigned char *data, unsigned int sz) {
     return createStringObject((char*)data,sz);
 }
 
-// 向list中弹出数据
+//// 从list中弹出数据
 robj *listTypePop(robj *subject, int where) {
     long long vlong;
     robj *value = NULL;
@@ -591,7 +591,7 @@ void rpoplpushCommand(client *c) {
  *----------------------------------------------------------------------------*/
 
 
-// 设置客户端对指定键的阻塞状态
+//// 设置客户端对指定键的阻塞状态
 // 参数keys可以指定任意数量的键，timeout指定超时时间，target代表目标listType对象
 void blockForKeys(client *c, robj **keys, int numkeys, mstime_t timeout, robj *target) {
     dictEntry *de;
@@ -843,27 +843,26 @@ void handleClientsBlockedOnLists(void) {
     }
 }
 
-// 带有阻塞的pop(RPOP/LPOP)命令实现函数
+//// 带有阻塞的pop(RPOP/LPOP)命令实现函数
 void blockingPopGenericCommand(client *c, int where) {
     robj *o;
     mstime_t timeout;
     int j;
 
-    // 取出timeout参数，阻塞超时时间
+    // 取出timeout参数，阻塞超时时间（最后一个参数是超时时间）
     if (getTimeoutFromObjectOrReply(c,c->argv[c->argc-1],&timeout,UNIT_SECONDS)
         != C_OK) return;
 
-    // 遍历所有输入键
+    // 遍历所有输入键（blpop/brpop支持一次查询多个键）
     for (j = 1; j < c->argc-1; j++) {
 
-        // 在当前数据库中查找list键
-        o = lookupKeyWrite(c->db,c->argv[j]);
-        if (o != NULL) {// 执行到此处，说明数据库中存在此键
-            if (o->type != OBJ_LIST) {// 检查类型
+        o = lookupKeyWrite(c->db,c->argv[j]);       // 在当前数据库中查找list键
+        if (o != NULL) {                            // 执行到此处，说明数据库中存在此键
+            if (o->type != OBJ_LIST) {              // 检查类型，type不是list的返回错误信息
                 addReply(c,shared.wrongtypeerr);
                 return;
-            } else {
-                if (listTypeLength(o) != 0) {// list不为空的话，则转换为普通的pop操作
+            } else {                                // 类型正确
+                if (listTypeLength(o) != 0) {       // list不为空的话，则转换为普通的pop操作
                     char *event = (where == LIST_HEAD) ? "lpop" : "rpop";
                     robj *value = listTypePop(o,where);
                     serverAssert(value != NULL);
@@ -888,6 +887,8 @@ void blockingPopGenericCommand(client *c, int where) {
                     rewriteClientCommandVector(c,2,
                         (where == LIST_HEAD) ? shared.lpop : shared.rpop,
                         c->argv[j]);
+
+                    //// 只要有一个存在就会返回，而且只会返回一个
                     return;
                 }
             }
@@ -900,17 +901,20 @@ void blockingPopGenericCommand(client *c, int where) {
         return;
     }
 
-    // 执行到此处，说明列表为空，或者当前键并不存在
-    // 执行阻塞
+    //// 执行到此处，说明列表为空，或者当前键并不存在
+    // 设置客户端被哪个key阻塞c->bpop.keys
+    // 设置数据库被阻塞的key，关联了哪些客户端c->db->block_keys
     blockForKeys(c, c->argv + 1, c->argc - 2, timeout, NULL);
+
+    //// blpop/brpop执行到这里就结束了，redis服务端没有给客户端回复信息，客户端一直没反应
 }
 
-// BLPOP命令
+//// BLPOP命令
 void blpopCommand(client *c) {
     blockingPopGenericCommand(c,LIST_HEAD);
 }
 
-// BRPOP命令
+//// BRPOP命令
 void brpopCommand(client *c) {
     blockingPopGenericCommand(c,LIST_TAIL);
 }

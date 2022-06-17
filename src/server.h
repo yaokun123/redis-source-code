@@ -652,16 +652,14 @@ typedef struct multiState {
     time_t minreplicas_timeout; // 超时时间
 } multiState;
 
-/* This structure holds the blocking operation state for a client.
- * The fields used depend on client->btype. */
+//// 客户端的阻塞状态
 typedef struct blockingState {
     /* Generic fields. */
     mstime_t timeout;       /* Blocking operation timeout. If UNIX current time
                              * is > timeout then the operation timed out. */
 
     /* BLOCKED_LIST */
-    dict *keys;             /* The keys we are waiting to terminate a blocking
-                             * operation such as BLPOP. Otherwise NULL. */
+    dict *keys;             // 造成该客户端阻塞的所有key
     robj *target;           /* The key that should receive the element,
                              * for BRPOPLPUSH. */
 
