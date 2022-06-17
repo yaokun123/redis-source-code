@@ -3620,7 +3620,8 @@ int main(int argc, char **argv) {
 
 
 
-    // 初始化服务配置(会将命令映射到对应的函数上)
+    //// 初始化服务器状态结构
+    // 会将命令映射到对应的函数上
     initServerConfig();
 
 
