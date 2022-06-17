@@ -748,7 +748,7 @@ typedef struct client {
     sds peerid;             /* Cached peer ID. */
 
     /* Response buffer */
-    //// 固定大小缓冲区
+    //// 回复固定大小缓冲区
     int bufpos;                        //// 回复缓冲区已使用大小
     char buf[PROTO_REPLY_CHUNK_BYTES];//// 回复缓冲区
 } client;
