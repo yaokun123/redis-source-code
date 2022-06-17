@@ -903,16 +903,16 @@ struct clusterState;
 //// redis服务器结构
 struct redisServer {
     /* General */
-    pid_t pid;                  /* Main process pid. */
+    pid_t pid;                  //// 主进程的pid
     char *configfile;           /* Absolute config file path, or NULL */
     char *executable;           /* Absolute executable file path. */
     char **exec_argv;           /* Executable argv vector (copy). */
     int hz;                     /* serverCron() calls frequency in hertz */
     redisDb *db;                //// 一个数组，保存着服务器中的所有数据库
     dict *commands;             //// 命令表
-    dict *orig_commands;        //// Command table before command renaming. */
+    dict *orig_commands;        //// 命令表
     aeEventLoop *el;            //// 事件循环
-    unsigned int lruclock;      /* Clock for LRU eviction */
+    unsigned int lruclock;      //// 保存服务器的LRU时钟，用于计算键的空转时长
     int shutdown_asap;          /* SHUTDOWN needed ASAP */
     int activerehashing;        /* Incremental rehash in serverCron() */
     int active_defrag_running;  /* Active defragmentation running (holds current scan aggressiveness) */
