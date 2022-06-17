@@ -913,6 +913,8 @@ struct redisServer {
     dict *orig_commands;        //// 命令表
     aeEventLoop *el;            //// 事件循环
     unsigned int lruclock;      //// 保存服务器的LRU时钟，用于计算键的空转时长
+                                // 每个redis对象都有一个lru属性，这个lru属性保存了对象最后一次被命令访问的时间
+                                // 当服务器要计算一个数据库键的空转时间（也即是数据库键对应的值对象的空转时间）lruclock-lru
     int shutdown_asap;          /* SHUTDOWN needed ASAP */
     int activerehashing;        /* Incremental rehash in serverCron() */
     int active_defrag_running;  /* Active defragmentation running (holds current scan aggressiveness) */
