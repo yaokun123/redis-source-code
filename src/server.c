@@ -1122,7 +1122,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
     // 刷新aof 缓存（aof_buf）到文件
     flushAppendOnlyFile(0);
 
-    /* Handle writes with pending output buffers. */
+    // 加入可写监控
     handleClientsWithPendingWrites();
 
     /* Before we are going to sleep, let the threads access the dataset by
