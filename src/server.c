@@ -1229,15 +1229,18 @@ void initServerConfig(void) {
     pthread_mutex_init(&server.lruclock_mutex,NULL);
     pthread_mutex_init(&server.unixtime_mutex,NULL);
 
+    // 设置服务器的运行id
     getRandomHexChars(server.runid,CONFIG_RUN_ID_SIZE);
     server.runid[CONFIG_RUN_ID_SIZE] = '\0';
+
     changeReplicationId();
     clearReplicationId2();
-    server.configfile = NULL;
+
+    server.configfile = NULL;                   // 默认配置文件路径
     server.executable = NULL;
-    server.hz = CONFIG_DEFAULT_HZ;
-    server.arch_bits = (sizeof(long) == 8) ? 64 : 32;
-    server.port = CONFIG_DEFAULT_SERVER_PORT;
+    server.hz = CONFIG_DEFAULT_HZ;              // 默认服务器频率
+    server.arch_bits = (sizeof(long) == 8) ? 64 : 32;// 默认服务器运行架构
+    server.port = CONFIG_DEFAULT_SERVER_PORT;       // 默认服务器端口
     server.tcp_backlog = CONFIG_DEFAULT_TCP_BACKLOG;
     server.bindaddr_count = 0;
     server.unixsocket = NULL;
@@ -3619,7 +3622,6 @@ int main(int argc, char **argv) {
     server.sentinel_mode = checkForSentinelMode(argc,argv);
 
 
-
     //// 初始化服务器状态结构
     // 会将命令映射到对应的函数上
     initServerConfig();
@@ -3653,6 +3655,8 @@ int main(int argc, char **argv) {
     else if (strstr(argv[0],"redis-check-aof") != NULL)
         redis_check_aof_main(argc,argv);
 
+
+    //// 解析命令行启动参数
     if (argc >= 2) {
         j = 1; /* First option to parse in argv[] */
         sds options = sdsempty();
