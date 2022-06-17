@@ -915,21 +915,23 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
         }
     }
 
-    /* We need to do a few operations on clients asynchronously. */
+    //// 管理客户端资源
     clientsCron();
 
-    /* Handle background operations on Redis databases. */
+    //// 管理数据库资源
+    // 定期删除，收缩字典等。。。
     databasesCron();
 
-    /* Start a scheduled AOF rewrite if this was requested by the user while
-     * a BGSAVE was in progress. */
+    //// 执行被延迟的bgrewrite
     if (server.rdb_child_pid == -1 && server.aof_child_pid == -1 &&
         server.aof_rewrite_scheduled)
     {
         rewriteAppendOnlyFileBackground();
     }
 
-    //// 如果有rdb子进程或aof重写子进程
+
+    //// 检查持久化操作的运行状态
+    // 如果有rdb子进程或aof重写子进程
     if (server.rdb_child_pid != -1 || server.aof_child_pid != -1 ||
         ldbPendingChildren())
     {
@@ -1058,6 +1060,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
             server.rdb_bgsave_scheduled = 0;
     }
 
+    //// 增加cronloops计数器的值
     server.cronloops++;
     return 1000/server.hz;
 }

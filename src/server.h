@@ -921,7 +921,7 @@ struct redisServer {
     char *requirepass;          /* Pass for AUTH command, or NULL */
     char *pidfile;              /* PID file path */
     int arch_bits;              /* 32 or 64 depending on sizeof(long) */
-    int cronloops;              /* Number of times the cron function run */
+    int cronloops;              //// 记录serverCron函数执行的次数
     char runid[CONFIG_RUN_ID_SIZE+1];  /* ID always different at every exec. */
     int sentinel_mode;          /* True if this instance is a Sentinel. */
     size_t initial_memory_usage; /* Bytes used after initialization. */
@@ -933,8 +933,8 @@ struct redisServer {
                                    client blocked on a module command needs
                                    to be processed. */
     /* Networking */
-    int port;                   /* TCP listening port */
-    int tcp_backlog;            /* TCP listen() backlog */
+    int port;                   //// 端口
+    int tcp_backlog;            //// TCP listen() backlog
     char *bindaddr[CONFIG_BINDADDR_MAX];         //// Addresses we should bind to
     int bindaddr_count;                         //// Number of addresses in server.bindaddr[]
     char *unixsocket;           /* UNIX socket path */
@@ -946,7 +946,7 @@ struct redisServer {
     int cfd_count;              /* Used slots in cfd[] */
     list *clients;              //// 正常状态下的客户端链表
     list *clients_to_close;     /* Clients to close asynchronously */
-    list *clients_pending_write; //// 需要回复的客户端，就是需要加入可写队列的
+    list *clients_pending_write; //// 需要回复的客户端，就是需要加入可写队列的客户端
     list *slaves, *monitors;    /* List of slaves and MONITORs */
     client *current_client; /* Current client, only used on crash report */
     int clients_paused;         /* True if clients are currently paused */
