@@ -964,10 +964,8 @@ void sendReplyToClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     writeToClient(fd,privdata,1);
 }
 
-/* This function is called just before entering the event loop, in the hope
- * we can just write the replies to the client output buffer without any
- * need to use a syscall in order to install the writable event handler,
- * get it called, and so forth. */
+
+//// 将server.clients_pending_write双端链表中的client->fd，创建可写文件事件，并监控
 int handleClientsWithPendingWrites(void) {
     listIter li;
     listNode *ln;
