@@ -167,6 +167,7 @@ int prepareClientToWrite(client *c) {
          (c->replstate == SLAVE_STATE_ONLINE && !c->repl_put_online_on_ack)))
     {
         c->flags |= CLIENT_PENDING_WRITE;
+        //// 加入需要回复的双端链表头部
         listAddNodeHead(server.clients_pending_write,c);
     }
 
