@@ -944,7 +944,7 @@ struct redisServer {
     int cfd_count;              /* Used slots in cfd[] */
     list *clients;              //// 正常状态下的客户端链表
     list *clients_to_close;     /* Clients to close asynchronously */
-    list *clients_pending_write; //// There is to write or install handler. */
+    list *clients_pending_write; //// 需要回复的客户端，就是需要加入可写队列的
     list *slaves, *monitors;    /* List of slaves and MONITORs */
     client *current_client; /* Current client, only used on crash report */
     int clients_paused;         /* True if clients are currently paused */
