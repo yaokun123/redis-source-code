@@ -871,17 +871,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
                 server.stat_net_output_bytes);
     }
 
-    /* We have just LRU_BITS bits per object for LRU information.
-     * So we use an (eventually wrapping) LRU clock.
-     *
-     * Note that even if the counter wraps it's not a big problem,
-     * everything will still work but some object will appear younger
-     * to Redis. However for this to happen a given object should never be
-     * touched for all the time needed to the counter to wrap, which is
-     * not likely.
-     *
-     * Note that you can change the resolution altering the
-     * LRU_CLOCK_RESOLUTION define. */
+
     unsigned long lruclock = getLRUClock();
     atomicSet(server.lruclock,lruclock);
 
