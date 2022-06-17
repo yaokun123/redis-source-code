@@ -915,7 +915,7 @@ struct redisServer {
     unsigned int lruclock;      //// 保存服务器的LRU时钟，用于计算键的空转时长
                                 // 每个redis对象都有一个lru属性，这个lru属性保存了对象最后一次被命令访问的时间
                                 // 当服务器要计算一个数据库键的空转时间（也即是数据库键对应的值对象的空转时间）lruclock-lru
-    int shutdown_asap;          /* SHUTDOWN needed ASAP */
+    int shutdown_asap;          //// 关闭服务器的标识，0不关闭，1关闭
     int activerehashing;        /* Incremental rehash in serverCron() */
     int active_defrag_running;  /* Active defragmentation running (holds current scan aggressiveness) */
     char *requirepass;          /* Pass for AUTH command, or NULL */
@@ -977,7 +977,7 @@ struct redisServer {
     long long stat_active_defrag_misses;    /* number of allocations scanned but not moved */
     long long stat_active_defrag_key_hits;  /* number of keys with moved allocations */
     long long stat_active_defrag_key_misses;/* number of keys scanned and not moved */
-    size_t stat_peak_memory;        /* Max used memory record */
+    size_t stat_peak_memory;        //// 已使用内存峰值
     long long stat_fork_time;       /* Time needed to perform latest fork() */
     double stat_fork_rate;          /* Fork rate in GB/sec. */
     long long stat_rejected_conn;   /* Clients rejected because of maxclients */
