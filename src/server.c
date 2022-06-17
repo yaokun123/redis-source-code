@@ -3744,7 +3744,7 @@ int main(int argc, char **argv) {
 
 
 
-    // 初始化server
+    //// 初始化server
     initServer();
 
 
@@ -3785,7 +3785,7 @@ int main(int argc, char **argv) {
         serverLog(LL_WARNING,"WARNING: You specified a maxmemory value that is less than 1MB (current value is %llu bytes). Are you sure this is what you really want?", server.maxmemory);
     }
 
-    // 设置beforesleep和aftersleep
+    //// 设置beforesleep和aftersleep
     aeSetBeforeSleepProc(server.el,beforeSleep);
     aeSetAfterSleepProc(server.el,afterSleep);
 
