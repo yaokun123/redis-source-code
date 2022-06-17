@@ -84,13 +84,13 @@ robj *lookupKeyWriteOrReply(client *c, robj *key, robj *reply) {
     return o;
 }
 
-// 添加键值对
+//// 添加键值对
 void dbAdd(redisDb *db, robj *key, robj *val) {
     sds copy = sdsdup(key->ptr);                                // 复制键对象
     int retval = dictAdd(db->dict, copy, val);                  // 添加到数据库
 
     serverAssertWithInfo(NULL,key,retval == DICT_OK);
-    if (val->type == OBJ_LIST) signalListAsReady(db, key);      // 用来检查解阻塞
+    if (val->type == OBJ_LIST) signalListAsReady(db, key);      //// 用来检查解阻塞
     if (server.cluster_enabled) slotToKeyAdd(key);
  }
 

@@ -168,42 +168,46 @@ void listTypeConvert(robj *subject, int enc) {
 /*-----------------------------------------------------------------------------
  * List Commands
  *----------------------------------------------------------------------------*/
-
+//// push操作
 void pushGenericCommand(client *c, int where) {
     int j, pushed = 0;
-    robj *lobj = lookupKeyWrite(c->db,c->argv[1]);
+    robj *lobj = lookupKeyWrite(c->db,c->argv[1]);      // 根据key在当前数据库中查找
 
-    if (lobj && lobj->type != OBJ_LIST) {
+    if (lobj && lobj->type != OBJ_LIST) {                   // 类型不是list返回错误
         addReply(c,shared.wrongtypeerr);
         return;
     }
 
-    for (j = 2; j < c->argc; j++) {
-        if (!lobj) {
+    for (j = 2; j < c->argc; j++) {                        // 遍历要添加的值
+        if (!lobj) {                                       // 如果快表不存在，则新建
             lobj = createQuicklistObject();
             quicklistSetOptions(lobj->ptr, server.list_max_ziplist_size,
                                 server.list_compress_depth);
-            dbAdd(c->db,c->argv[1],lobj);
+            dbAdd(c->db,c->argv[1],lobj);             // 向当前数据库中添加key,value为一个快表
+                                                        //// dbAdd中判断如果是列表会做解阻塞准备
         }
         listTypePush(lobj,c->argv[j],where);
         pushed++;
     }
     addReplyLongLong(c, (lobj ? listTypeLength(lobj) : 0));
+
+    // 如果追加了数据
     if (pushed) {
         char *event = (where == LIST_HEAD) ? "lpush" : "rpush";
 
         signalModifiedKey(c->db,c->argv[1]);
+
         notifyKeyspaceEvent(NOTIFY_LIST,event,c->argv[1],c->db->id);
     }
     server.dirty += pushed;
 }
 
-// lpush操作
+//// lpush操作
 void lpushCommand(client *c) {
     pushGenericCommand(c,LIST_HEAD);
 }
 
-// rpush操作
+//// rpush操作
 void rpushCommand(client *c) {
     pushGenericCommand(c,LIST_TAIL);
 }
@@ -668,7 +672,7 @@ void unblockClientWaitingData(client *c) {
     }
 }
 
-// 如果有客户端因为等待给定key 被push阻塞，那么将此key加入到server.ready_keys中
+//// 如果有客户端因为等待给定key 被push阻塞，那么将此key加入到server.ready_keys中
 // 这个列表最终会被 handleClientsBlockedOnLists() 函数处理。
 void signalListAsReady(redisDb *db, robj *key) {
     readyList *rl;
@@ -762,10 +766,13 @@ int serveClientBlockedOnList(client *receiver, robj *key, robj *dstkey, redisDb 
     return C_OK;
 }
 
-// 遍历server.ready_keys中所有已经准备好的key，同时在c->db->blocking_keys中
+//// 解除客户端阻塞
+//，同时在c->db->blocking_keys中
 // 遍历所有由此键造成阻塞的客户端，如果key不为空的话，就从key中弹出一个元素返回给客户端并
 // 解除该客户端的阻塞状态，直到server.ready_keys为空，或没有因该key而阻塞的客户端为止
 void handleClientsBlockedOnLists(void) {
+
+    // 遍历server.ready_keys中所有已经准备好的key
     while(listLength(server.ready_keys) != 0) {
         list *l;
 
@@ -806,7 +813,7 @@ void handleClientsBlockedOnLists(void) {
                         if (value) {                                            // 还有元素可弹出，非NULL
                             if (dstkey) incrRefCount(dstkey);
 
-                            // 取消客户端的阻塞状态
+                            //// 取消客户端的阻塞状态
                             // 从db->blocking_keys键对应的链表中删除，也是在这个函数中处理的
                             unblockClient(receiver);
 
@@ -903,7 +910,7 @@ void blockingPopGenericCommand(client *c, int where) {
 
     //// 执行到此处，说明列表为空，或者当前键并不存在
     // 设置客户端被哪个key阻塞c->bpop.keys
-    // 设置数据库被阻塞的key，关联了哪些客户端c->db->block_keys
+    // 设置数据库被阻塞的key，关联了哪些客户端c->db->blocking_keys
     blockForKeys(c, c->argv + 1, c->argc - 2, timeout, NULL);
 
     //// blpop/brpop执行到这里就结束了，redis服务端没有给客户端回复信息，客户端一直没反应

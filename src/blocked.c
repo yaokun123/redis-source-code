@@ -55,7 +55,7 @@ void processUnblockedClients(void) {
     }
 }
 
-// 解除客户端阻塞
+//// 解除客户端阻塞
 void unblockClient(client *c) {
     if (c->btype == BLOCKED_LIST) {// 解除list类型的阻塞
         unblockClientWaitingData(c);// 从db->blocking_keys中key对应的链表中删除阻塞的客户端

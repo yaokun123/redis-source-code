@@ -2401,7 +2401,7 @@ int processCommand(client *c) {
         call(c,CMD_CALL_FULL);        //// 执行命令
         c->woff = server.master_repl_offset;
         if (listLength(server.ready_keys))
-            handleClientsBlockedOnLists();
+            handleClientsBlockedOnLists();  //// 解除客户端阻塞的
     }
     return C_OK;
 }
