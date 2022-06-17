@@ -848,7 +848,7 @@ void updateCachedTime(void) {
 }
 
 
-//// Redis定义了一个例行处理程序serverCron，该程序每隔1ms执行一次
+//// Redis定义了一个例行处理程序serverCron，该程序每隔100ms执行一次，可以由server.hz控制
 // 在其执行过程中会调用databasesCron函数，这个函数里面才会调用真正的定期删除函数activeExpireCycle
 int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     int j;
@@ -1062,6 +1062,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
     //// 增加cronloops计数器的值
     server.cronloops++;
+
+    //// 返回值是下次事件多少ms后执行，server.hz默认是10，所以默认该函数每100ms执行一次
     return 1000/server.hz;
 }
 
