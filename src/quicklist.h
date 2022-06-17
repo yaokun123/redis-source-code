@@ -3,7 +3,8 @@
 
 /* Node, quicklist, and Iterator are the only data structures used currently. */
 
-// quicklist节点的数据结构（每个quicklistnode也占用32个字节）
+//// quicklist节点的数据结构（每个quicklistnode也占用32个字节）
+// 8 + 8 + 8 + 4 + 4
 typedef struct quicklistNode {
     struct quicklistNode *prev;     // 指向上一个ziplist节点
     struct quicklistNode *next;     // 指向下一个ziplist节点
@@ -23,7 +24,8 @@ typedef struct quicklistLZF {
     char compressed[];              // 柔性数组，指向数据部分
 } quicklistLZF;
 
-// quicklist的数据结构定义(每个quicklist结构占用32个字节的空间)
+//// quicklist的数据结构定义(每个quicklist结构占用32个字节的空间)
+// 8 + 8 + 8 + 4 + 4 = 32
 typedef struct quicklist {
     quicklistNode *head;            // 指向quicklist的头部
     quicklistNode *tail;            // 指向quicklist的尾部

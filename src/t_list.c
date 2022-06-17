@@ -1,6 +1,6 @@
 #include "server.h"
 
-// 向list中压入数据
+//// 向list中压入数据
 void listTypePush(robj *subject, robj *value, int where) {
 
     // 仅仅当编码类型为OBJ_ENCODING_QUICKLIST时才进行操作
@@ -186,7 +186,7 @@ void pushGenericCommand(client *c, int where) {
             dbAdd(c->db,c->argv[1],lobj);             // 向当前数据库中添加key,value为一个快表
                                                         //// dbAdd中判断如果是列表会做解阻塞准备
         }
-        listTypePush(lobj,c->argv[j],where);
+        listTypePush(lobj,c->argv[j],where);              // 向快表中添加元素
         pushed++;
     }
     addReplyLongLong(c, (lobj ? listTypeLength(lobj) : 0));

@@ -59,7 +59,7 @@ static const size_t optimization_level[] = {4096, 8192, 16384, 32768, 65536};
 #define unlikely(x) (x)
 #endif
 
-// 创建一个quicklist
+//// 创建一个quicklist
 quicklist *quicklistCreate(void) {
     struct quicklist *quicklist;                    // 声明指针
 
@@ -481,7 +481,7 @@ int quicklistPushHead(quicklist *quicklist, void *value, size_t sz) {
     return (orig_head != quicklist->head);
 }
 
-// 将新数据项push到尾部
+//// 将新数据项push到尾部
 int quicklistPushTail(quicklist *quicklist, void *value, size_t sz) {
     quicklistNode *orig_tail = quicklist->tail;
     if (likely(
@@ -1404,7 +1404,7 @@ int quicklistPop(quicklist *quicklist, int where, unsigned char **data,
     return ret;
 }
 
-// push操作，需要判断是头部插入还是尾部插入
+//// push操作，需要判断是头部插入还是尾部插入
 void quicklistPush(quicklist *quicklist, void *value, const size_t sz,
                    int where) {
     if (where == QUICKLIST_HEAD) {

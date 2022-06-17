@@ -150,8 +150,8 @@ robj *dupStringObject(const robj *o) {
 }
 
 robj *createQuicklistObject(void) {
-    quicklist *l = quicklistCreate();
-    robj *o = createObject(OBJ_LIST,l);
+    quicklist *l = quicklistCreate();// 32
+    robj *o = createObject(OBJ_LIST,l);// 16
     o->encoding = OBJ_ENCODING_QUICKLIST;
     return o;
 }
