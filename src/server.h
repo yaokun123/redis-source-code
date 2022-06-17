@@ -1182,9 +1182,12 @@ struct redisServer {
     /* List parameters */
     int list_max_ziplist_size;
     int list_compress_depth;
+
     /* time cache */
-    time_t unixtime;    /* Unix time sampled every cron cycle. */
-    long long mstime;   /* Like 'unixtime' but with milliseconds resolution. */
+    time_t unixtime;    // 保存了秒级精度的系统当前UNIX时间戳
+    long long mstime;   // 保存了毫秒级精度的系统当前UNIX时间戳
+    // 因为这两个时间是在serverCron中设置的，而serverCron默认1ms执行一次，所以这两个属性记录的时间的精度并不高
+
     /* Pubsub */
     dict *pubsub_channels;  /* Map channels to list of subscribed clients */
     list *pubsub_patterns;  /* A list of pubsub_patterns */

@@ -840,10 +840,7 @@ void databasesCron(void) {
     }
 }
 
-/* We take a cached value of the unix time in the global state because with
- * virtual memory and aging there is to store the current time in objects at
- * every object access, and accuracy is not needed. To access a global var is
- * a lot faster than calling time(NULL) */
+//// 更新缓存当前时间
 void updateCachedTime(void) {
     time_t unixtime = time(NULL);
     atomicSet(server.unixtime,unixtime);
@@ -863,7 +860,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
      * handler if we don't return here fast enough. */
     if (server.watchdog_period) watchdogScheduleSignal(server.watchdog_period);
 
-    /* Update the time cache. */
+    // 更新缓存当前时间server.unixtime和server.mstime
     updateCachedTime();
 
     run_with_period(100) {
