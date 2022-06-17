@@ -966,6 +966,7 @@ void sendReplyToClient(aeEventLoop *el, int fd, void *privdata, int mask) {
 
 
 //// 将server.clients_pending_write双端链表中的client->fd，创建可写文件事件，并监控
+// 该函数在beforeSleep中会调用，而beforeSleep会在主进程每次循环的时候调用，所以该函数也是被循环执行的
 int handleClientsWithPendingWrites(void) {
     listIter li;
     listNode *ln;

@@ -446,6 +446,7 @@ int aeWait(int fd, int mask, long long milliseconds) {
 void aeMain(aeEventLoop *eventLoop) {
     eventLoop->stop = 0;    // 开启事件循环
     while (!eventLoop->stop) {
+        // 如果beforesleep被设置则先执行
         if (eventLoop->beforesleep != NULL)
             eventLoop->beforesleep(eventLoop);
 
