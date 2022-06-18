@@ -920,7 +920,7 @@ struct redisServer {
     char *pidfile;              //// pid存放的文件
     int arch_bits;              /* 32 or 64 depending on sizeof(long) */
     int cronloops;              //// 记录serverCron函数执行的次数
-    char runid[CONFIG_RUN_ID_SIZE+1];  /* ID always different at every exec. */
+    char runid[CONFIG_RUN_ID_SIZE+1];  //// 服务器运行id，在服务器启动时自动生成，40个随机的十六进制字符组成
     int sentinel_mode;          /* True if this instance is a Sentinel. */
     size_t initial_memory_usage; /* Bytes used after initialization. */
     int always_show_logo;       /* Show logo even for non-stdout logging. */
