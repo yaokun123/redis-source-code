@@ -917,7 +917,7 @@ struct redisServer {
     int activerehashing;        /* Incremental rehash in serverCron() */
     int active_defrag_running;  /* Active defragmentation running (holds current scan aggressiveness) */
     char *requirepass;          /* Pass for AUTH command, or NULL */
-    char *pidfile;              /* PID file path */
+    char *pidfile;              //// pid存放的文件
     int arch_bits;              /* 32 or 64 depending on sizeof(long) */
     int cronloops;              //// 记录serverCron函数执行的次数
     char runid[CONFIG_RUN_ID_SIZE+1];  /* ID always different at every exec. */
