@@ -921,6 +921,11 @@ struct redisServer {
     int arch_bits;              /* 32 or 64 depending on sizeof(long) */
     int cronloops;              //// 记录serverCron函数执行的次数
     char runid[CONFIG_RUN_ID_SIZE+1];  //// 服务器运行id，在服务器启动时自动生成，40个随机的十六进制字符组成
+                                    // 当从服务器对主服务器进行初次复制时，主服务器会将自己的运行id传送给从服务器
+                                    // 而从服务器则会将这个运行ID保存起来
+                                    // 当从服务器断线并且重新连上一个主服务器时，从服务器将向当前连接的主服务器发送之前保存的运行ID
+                                    // 如果从服务器保存的运行ID和当前连接的主服务器的运行ID相同，那么说明从服务器断线之前复制的就是当前连接的这个主服务器，主服务器可以继续尝试执行部分重同步操作
+                                    // 如果从服务器保存的运行ID和当前连接的主服务器的运行ID不相同，那么说明从服务器断线之前复制的并不是当前连接的这个主服务器，主服务器将对从服务器执行完整重同步操作
     int sentinel_mode;          /* True if this instance is a Sentinel. */
     size_t initial_memory_usage; /* Bytes used after initialization. */
     int always_show_logo;       /* Show logo even for non-stdout logging. */
