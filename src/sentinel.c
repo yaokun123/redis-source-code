@@ -194,10 +194,11 @@ typedef struct sentinelRedisInstance {
     sds info; /* cached INFO output */
 } sentinelRedisInstance;
 
-/* Main state. */
+//// 这个结构保存了服务器中所有和哨兵功能相关的状态
+// 服务器的一般状态仍然由redisServer结构保存
 struct sentinelState {
-    char myid[CONFIG_RUN_ID_SIZE+1]; /* This sentinel ID. */
-    uint64_t current_epoch;         /* Current epoch. */
+    char myid[CONFIG_RUN_ID_SIZE+1]; //// 哨兵的id，跟主从的runid类似
+    uint64_t current_epoch;         //// 当前纪元，用于实现故障转移
     dict *masters;      /* Dictionary of master sentinelRedisInstances.
                            Key is the instance name, value is the
                            sentinelRedisInstance structure pointer. */
