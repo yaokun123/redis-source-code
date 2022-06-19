@@ -14,7 +14,7 @@ extern char **environ;
 
 /* ======================== Sentinel global state =========================== */
 
-/* Address object, used to describe an ip:port pair. */
+//// 地址结构
 typedef struct sentinelAddr {
     char *ip;
     int port;
