@@ -199,14 +199,13 @@ typedef struct sentinelRedisInstance {
 struct sentinelState {
     char myid[CONFIG_RUN_ID_SIZE+1]; //// 哨兵的id，跟主从的runid类似
     uint64_t current_epoch;         //// 当前纪元，用于实现故障转移
-    dict *masters;      /* Dictionary of master sentinelRedisInstances.
-                           Key is the instance name, value is the
-                           sentinelRedisInstance structure pointer. */
-    int tilt;           /* Are we in TILT mode? */
-    int running_scripts;    /* Number of scripts in execution right now. */
-    mstime_t tilt_start_time;       /* When TITL started. */
-    mstime_t previous_time;         /* Last time we ran the time handler. */
-    list *scripts_queue;            /* Queue of user scripts to execute. */
+    dict *masters;                  //// 保存了所有被这个哨兵监视的主服务器
+                                    // 字典的键是主服务器的名字
+                                    // 字典的值是一个指向sentinelRedisInstance结构的指针
+    int running_scripts;            //// 目前正在执行的脚本的数量
+    mstime_t tilt_start_time;       //// 进入TITL模式的时间
+    mstime_t previous_time;         //// 最后一次执行时间处理器的时间
+    list *scripts_queue;            //// 一个FIFO队列，包含了所有需要执行的用户脚本
     char *announce_ip;  /* IP addr that is gossiped to other sentinels if
                            not NULL. */
     int announce_port;  /* Port that is gossiped to other sentinels if
