@@ -207,6 +207,7 @@ struct sentinelState {
     dict *masters;                  //// 保存了所有被这个哨兵监视的主服务器
                                     // 字典的键是主服务器的名字
                                     // 字典的值是一个指向sentinelRedisInstance结构的指针
+    int tilt;           /* Are we in TILT mode? */
     int running_scripts;            //// 目前正在执行的脚本的数量
     mstime_t tilt_start_time;       //// 进入TITL模式的时间
     mstime_t previous_time;         //// 最后一次执行时间处理器的时间
