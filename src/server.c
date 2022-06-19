@@ -2096,6 +2096,7 @@ void call(client *c, int flags) {
 
     /* Sent the command to clients in MONITOR mode, only if the commands are
      * not generated from reading an AOF. */
+    //// 给监控的客户端发送执行的命令
     if (listLength(server.monitors) &&
         !server.loading &&
         !(c->cmd->flags & (CMD_SKIP_MONITOR|CMD_ADMIN)))
@@ -3229,12 +3230,13 @@ void infoCommand(client *c) {
     addReplyBulkSds(c, genRedisInfoString(section));
 }
 
+//// 通过执行monitor命令，客户端可以将自己变成一个监视器，实时地接受并打印出服务器当前处理的命令请求的相关信息
 void monitorCommand(client *c) {
     /* ignore MONITOR if already slave or in monitor mode */
     if (c->flags & CLIENT_SLAVE) return;
 
     c->flags |= (CLIENT_SLAVE|CLIENT_MONITOR);
-    listAddNodeTail(server.monitors,c);
+    listAddNodeTail(server.monitors,c);     // 将当前客户端加入到监控的客户端列表中
     addReply(c,shared.ok);
 }
 
