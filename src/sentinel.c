@@ -132,14 +132,14 @@ typedef struct instanceLink {
 
 //// 被监控的实例结构，可以是主服务器、从服务器或者是另外一个哨兵
 typedef struct sentinelRedisInstance {
-    int flags;      // 标识值，记录了实例的类型，以及该实例的当前状态
-    char *name;     // 实例的名字
+    int flags;      //// 标识值，记录了实例的类型，以及该实例的当前状态(SRI_MASTER/SRI_SLAVE)
+    char *name;     //// 实例的名字
                     // 主服务器的名字由用户在配置文件中设置
                     // 从服务器以及Sentinel的名字由Sentinel自动设置
                     // 格式为ip:port
-    char *runid;    // 实例的运行ID
-    uint64_t config_epoch;  // 配置纪元，用于实现故障转移
-    sentinelAddr *addr;     // 实例地址
+    char *runid;    //// 实例的运行ID
+    uint64_t config_epoch;  //// 配置纪元，用于实现故障转移
+    sentinelAddr *addr;     //// 实例地址
     instanceLink *link; /* Link to the instance, may be shared for Sentinels. */
     mstime_t last_pub_time;   /* Last time we sent hello via Pub/Sub. */
     mstime_t last_hello_time; /* Only used if SRI_SENTINEL is set. Last time
@@ -149,7 +149,7 @@ typedef struct sentinelRedisInstance {
                                              SENTINEL is-master-down command. */
     mstime_t s_down_since_time; /* Subjectively down since time. */
     mstime_t o_down_since_time; /* Objectively down since time. */
-    mstime_t down_after_period; // 实例无响应多少毫秒之后才会被判断为主观下线
+    mstime_t down_after_period; //// 实例无响应多少毫秒之后才会被判断为主观下线
                                 // down-afterpmilliseconds选贤设定的值
     mstime_t info_refresh;  /* Time at which we received INFO output from it. */
 
@@ -164,9 +164,9 @@ typedef struct sentinelRedisInstance {
 
     /* Master specific. */
     dict *sentinels;    /* Other sentinels monitoring the same master. */
-    dict *slaves;       /* Slaves for this master instance. */
-    unsigned int quorum;// 判断这个实例为客观下线所需的支持投票数量
-    int parallel_syncs; // 在执行故障转移操作时，可以同时对新的主服务器进行同步的从服务器数量
+    dict *slaves;       //// 从服务器的实例
+    unsigned int quorum;//// 判断这个实例为客观下线所需的支持投票数量
+    int parallel_syncs; //// 在执行故障转移操作时，可以同时对新的主服务器进行同步的从服务器数量
     char *auth_pass;    /* Password to use for AUTH against master & slaves. */
 
     /* Slave specific. */
