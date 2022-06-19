@@ -3641,9 +3641,8 @@ int main(int argc, char **argv) {
     server.exec_argv[argc] = NULL;
     for (j = 0; j < argc; j++) server.exec_argv[j] = zstrdup(argv[j]);
 
-    /* We need to init sentinel right now as parsing the configuration file
-     * in sentinel mode will have the effect of populating the sentinel
-     * data structures with master nodes to monitor. */
+
+    //// 如果该实例是以哨兵模式运行
     if (server.sentinel_mode) {
         initSentinelConfig();
         initSentinel();
@@ -3756,6 +3755,7 @@ int main(int argc, char **argv) {
     redisAsciiArt();
     checkTcpBacklogSettings();
 
+    //// 如果是哨兵模式，不需要加载数据。。。
     if (!server.sentinel_mode) {
         /* Things not needed when running in Sentinel mode. */
         serverLog(LL_WARNING,"Server initialized");
