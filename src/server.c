@@ -904,7 +904,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
         }
     }
 
-    /* Show information about connected clients */
+
+    //// 非哨兵模式下的日志
     if (!server.sentinel_mode) {
         run_with_period(5000) {
             serverLog(LL_VERBOSE,
@@ -1034,7 +1035,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
         if (server.cluster_enabled) clusterCron();
     }
 
-    /* Run the Sentinel timer if we are in sentinel mode. */
+
+    //// 哨兵模式下的定时器
     run_with_period(100) {
         if (server.sentinel_mode) sentinelTimer();
     }

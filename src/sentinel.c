@@ -4287,6 +4287,8 @@ void sentinelCheckTiltCondition(void) {
     sentinel.previous_time = mstime();
 }
 
+
+//// 哨兵模式的定时器，包含了哨兵要执行的所有操作
 void sentinelTimer(void) {
     sentinelCheckTiltCondition();
     sentinelHandleDictOfRedisInstances(sentinel.masters);
