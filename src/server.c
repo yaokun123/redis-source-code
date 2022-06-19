@@ -2109,21 +2109,15 @@ void call(client *c, int flags) {
     redisOpArray prev_also_propagate = server.also_propagate;
     redisOpArrayInit(&server.also_propagate);
 
-    /* Call the command. */
+    //// 执行命令
     dirty = server.dirty;
     start = ustime();
-
-
 
     //// 执行完相应的命令处理函数之后，就会调用addReply类的函数将要回复给客户端的信息写入客户端输出缓存。
     //// 这些函数包括addReply，addReplySds，addReplyError，addReplyStatus
     //// 这些函数首先都会调用prepareClientToWrite函数，注册socket描述符上的可写事件，然后将回复信息写入到客户端输出缓存中。
     c->cmd->proc(c);            //// 执行命令
-
-
-
-
-    duration = ustime()-start;
+    duration = ustime()-start;      // 记录命令执行的时间
     dirty = server.dirty-dirty;
     if (dirty < 0) dirty = 0;
 
@@ -2142,9 +2136,8 @@ void call(client *c, int flags) {
             server.lua_caller->flags |= CLIENT_FORCE_AOF;
     }
 
-    /* Log the command into the Slow log if needed, and populate the
-     * per-command statistics that we show in INFO commandstats. */
-    // 慢日志
+
+    //// 慢查询日志
     if (flags & CMD_CALL_SLOWLOG && c->cmd->proc != execCommand) {
         char *latency_event = (c->cmd->flags & CMD_FAST) ?
                               "fast-command" : "command";

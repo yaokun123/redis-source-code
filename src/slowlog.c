@@ -110,16 +110,14 @@ void slowlogInit(void) {
     listSetFreeMethod(server.slowlog,slowlogFreeEntry);
 }
 
-/* Push a new entry into the slow log.
- * This function will make sure to trim the slow log accordingly to the
- * configured max length. */
+//// 记录慢查询日志
 void slowlogPushEntryIfNeeded(client *c, robj **argv, int argc, long long duration) {
-    if (server.slowlog_log_slower_than < 0) return; /* Slowlog disabled */
-    if (duration >= server.slowlog_log_slower_than)
+    if (server.slowlog_log_slower_than < 0) return;     // 慢查询日志未开启
+    if (duration >= server.slowlog_log_slower_than)     // 命令执行时间以及超过了设置的最大时间，记录日志
         listAddNodeHead(server.slowlog,
                         slowlogCreateEntry(c,argv,argc,duration));
 
-    /* Remove old entries if needed. */
+    // 如果慢查询日志超过设置的条数，删除最旧的
     while (listLength(server.slowlog) > server.slowlog_max_len)
         listDelNode(server.slowlog,listLast(server.slowlog));
 }
