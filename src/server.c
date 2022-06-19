@@ -1865,7 +1865,7 @@ void initServer(void) {
 
     replicationScriptCacheInit();
     scriptingInit(1);           // 脚本初始化
-    slowlogInit();                   // 慢日志初始化
+    slowlogInit();                   // 慢查询日志初始化
     latencyMonitorInit();
     bioInit();
 

@@ -987,10 +987,10 @@ struct redisServer {
     long long stat_sync_full;       /* Number of full resyncs with slaves. */
     long long stat_sync_partial_ok; /* Number of accepted PSYNC requests. */
     long long stat_sync_partial_err;/* Number of unaccepted PSYNC requests. */
-    list *slowlog;                  /* SLOWLOG list of commands */
-    long long slowlog_entry_id;     /* SLOWLOG current entry ID */
-    long long slowlog_log_slower_than; /* SLOWLOG time limit (to get logged) */
-    unsigned long slowlog_max_len;     /* SLOWLOG max number of items logged */
+    list *slowlog;                  //// 保存了所有慢查询日志的链表（slowlogEntry）
+    long long slowlog_entry_id;     //// 下一条慢查询日志的ID
+    long long slowlog_log_slower_than; //// 指定执行时间超过多少微妙的命令请求会被记录到日志
+    unsigned long slowlog_max_len;     //// 指定服务器最多保存多少条慢查询日志（FIFO）
     size_t resident_set_size;       /* RSS sampled in serverCron(). */
     long long stat_net_input_bytes; /* Bytes read from network. */
     long long stat_net_output_bytes; /* Bytes written to network. */
