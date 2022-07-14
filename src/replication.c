@@ -1104,6 +1104,8 @@ void restartAOF() {
 
 /* Asynchronously read the SYNC payload we receive from a master */
 #define REPL_MAX_WRITTEN_BEFORE_FSYNC (1024*1024*8) /* 8 MB */
+
+//// 主从复制可读事件回调函数
 void readSyncBulkPayload(aeEventLoop *el, int fd, void *privdata, int mask) {
     char buf[4096];
     ssize_t nread, readlen;
@@ -1277,6 +1279,9 @@ void readSyncBulkPayload(aeEventLoop *el, int fd, void *privdata, int mask) {
         /* Final setup of the connected slave <- master link */
         zfree(server.repl_transfer_tmpfile);
         close(server.repl_transfer_fd);
+
+
+        //// 这里设置server.master之后，所有初始化连接都完成，状态更新为server.repl_state = REPL_STATE_CONNECTED已经建立连接状态
         replicationCreateMasterClient(server.repl_transfer_s,rsi.repl_stream_db);
         server.repl_state = REPL_STATE_CONNECTED;
         /* After a full resynchroniziation we use the replication ID and
@@ -1569,6 +1574,7 @@ int slaveTryPartialResynchronization(int fd, int read_reply) {
 
 /* This handler fires when the non blocking connect was able to
  * establish a connection with the master. */
+//// slave连接master之后会为文件描述符创建可读、可写的事件，此时可写事件会触发（触发即删除对可写事件的监听）
 void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
     char tmpfile[256], *err = NULL;
     int dfd = -1, maxtries = 5;
@@ -1578,15 +1584,13 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
     UNUSED(privdata);
     UNUSED(mask);
 
-    /* If this event fired after the user turned the instance into a master
-     * with SLAVEOF NO ONE we must just return ASAP. */
+    // 检查状态，如果是REPL_STATE_NONE则关闭文件描述符
     if (server.repl_state == REPL_STATE_NONE) {
         close(fd);
         return;
     }
 
-    /* Check for errors in the socket: after a non blocking connect() we
-     * may find that the socket is in error state. */
+    // 检查socket是否异常
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &sockerr, &errlen) == -1)
         sockerr = errno;
     if (sockerr) {
@@ -1595,21 +1599,22 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
         goto error;
     }
 
-    /* Send a PING to check the master is able to reply without errors. */
+    // 如果是第一次连接（可写事件触发的），ping一下msater就返回了，并将状态设置为pong，server.repl_state = REPL_STATE_RECEIVE_PONG
     if (server.repl_state == REPL_STATE_CONNECTING) {
         serverLog(LL_NOTICE,"Non blocking connect for SYNC fired the event.");
-        /* Delete the writable event so that the readable event remains
-         * registered and we can wait for the PONG reply. */
+
+        // 删除文件描述符对可写事件的监听
         aeDeleteFileEvent(server.el,fd,AE_WRITABLE);
         server.repl_state = REPL_STATE_RECEIVE_PONG;
-        /* Send the PING, don't check for errors at all, we have the timeout
-         * that will take care about this. */
+
+        // ping master
         err = sendSynchronousCommand(SYNC_CMD_WRITE,fd,"PING",NULL);
         if (err) goto write_error;
         return;
     }
 
-    /* Receive the PONG command. */
+    //// 走到这里说明是可读事件触发的
+    // 如果接受的消息是pong，更新状态为待认证。server.repl_state = REPL_STATE_SEND_AUTH
     if (server.repl_state == REPL_STATE_RECEIVE_PONG) {
         err = sendSynchronousCommand(SYNC_CMD_READ,fd,NULL);
 
@@ -1633,7 +1638,8 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
         server.repl_state = REPL_STATE_SEND_AUTH;
     }
 
-    /* AUTH with the master if required. */
+    // 如果需要认证，则发送认证命令，并更新状态server.repl_state = REPL_STATE_RECEIVE_AUTH
+    // 如果不需要认证，则直接更新状态server.repl_state = REPL_STATE_SEND_PORT
     if (server.repl_state == REPL_STATE_SEND_AUTH) {
         if (server.masterauth) {
             err = sendSynchronousCommand(SYNC_CMD_WRITE,fd,"AUTH",server.masterauth,NULL);
@@ -1644,8 +1650,6 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
             server.repl_state = REPL_STATE_SEND_PORT;
         }
     }
-
-    /* Receive AUTH reply. */
     if (server.repl_state == REPL_STATE_RECEIVE_AUTH) {
         err = sendSynchronousCommand(SYNC_CMD_READ,fd,NULL);
         if (err[0] == '-') {
@@ -1657,8 +1661,8 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
         server.repl_state = REPL_STATE_SEND_PORT;
     }
 
-    /* Set the slave port, so that Master's INFO command can list the
-     * slave listening port correctly. */
+    //// 走到这里已经完成认证，可以通信了
+    // 给master发送slave的监听端口，更新状态server.repl_state = REPL_STATE_RECEIVE_PORT
     if (server.repl_state == REPL_STATE_SEND_PORT) {
         sds port = sdsfromlonglong(server.slave_announce_port ?
             server.slave_announce_port : server.port);
@@ -1671,7 +1675,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
         return;
     }
 
-    /* Receive REPLCONF listening-port reply. */
+    // 收到master接受到端口的回复，更新状态REPL_STATE_SEND_IP
     if (server.repl_state == REPL_STATE_RECEIVE_PORT) {
         err = sendSynchronousCommand(SYNC_CMD_READ,fd,NULL);
         /* Ignore the error if any, not all the Redis versions support
@@ -1684,15 +1688,15 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
         server.repl_state = REPL_STATE_SEND_IP;
     }
 
-    /* Skip REPLCONF ip-address if there is no slave-announce-ip option set. */
+    // 给master发送slave的ip
+    // 如果没有ip，更新状态server.repl_state = REPL_STATE_SEND_CAPA
+    // 如果有ip，更新状态server.repl_state = REPL_STATE_RECEIVE_IP
     if (server.repl_state == REPL_STATE_SEND_IP &&
         server.slave_announce_ip == NULL)
     {
             server.repl_state = REPL_STATE_SEND_CAPA;
     }
 
-    /* Set the slave ip, so that Master's INFO command can list the
-     * slave IP address port correctly in case of port forwarding or NAT. */
     if (server.repl_state == REPL_STATE_SEND_IP) {
         err = sendSynchronousCommand(SYNC_CMD_WRITE,fd,"REPLCONF",
                 "ip-address",server.slave_announce_ip, NULL);
@@ -1702,11 +1706,9 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
         return;
     }
 
-    /* Receive REPLCONF ip-address reply. */
+    // 收到master的收到ip会回复，更新状态server.repl_state = REPL_STATE_RECEIVE_IP
     if (server.repl_state == REPL_STATE_RECEIVE_IP) {
         err = sendSynchronousCommand(SYNC_CMD_READ,fd,NULL);
-        /* Ignore the error if any, not all the Redis versions support
-         * REPLCONF listening-port. */
         if (err[0] == '-') {
             serverLog(LL_NOTICE,"(Non critical) Master does not understand "
                                 "REPLCONF ip-address: %s", err);
@@ -1721,6 +1723,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
      * PSYNC2: supports PSYNC v2, so understands +CONTINUE <new repl ID>.
      *
      * The master will ignore capabilities it does not understand. */
+    // 发送消息，更新状态 server.repl_state = REPL_STATE_RECEIVE_CAPA
     if (server.repl_state == REPL_STATE_SEND_CAPA) {
         err = sendSynchronousCommand(SYNC_CMD_WRITE,fd,"REPLCONF",
                 "capa","eof","capa","psync2",NULL);
@@ -1815,6 +1818,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
     }
 
     /* Setup the non blocking download of the bulk file. */
+    //// 之前为该文件描述符添加的可读事件在上一步已经删除，这里重新文文件描述符建立了新的可读监听
     if (aeCreateFileEvent(server.el,fd, AE_READABLE,readSyncBulkPayload,NULL)
             == AE_ERR)
     {
@@ -1847,6 +1851,7 @@ write_error: /* Handle sendSynchronousCommand(SYNC_CMD_WRITE) errors. */
     goto error;
 }
 
+//// slave连接master，并为文件描述符创建文件事件
 int connectWithMaster(void) {
     int fd;
 
@@ -1858,6 +1863,7 @@ int connectWithMaster(void) {
         return C_ERR;
     }
 
+    // 创建文件事件，可读可写
     if (aeCreateFileEvent(server.el,fd,AE_READABLE|AE_WRITABLE,syncWithMaster,NULL) ==
             AE_ERR)
     {
@@ -2489,6 +2495,7 @@ void replicationCron(void) {
     static long long replication_cron_loops = 0;
 
     /* Non blocking connection timeout? */
+    //// slave(设置过masterhost)才会执行这一步，握手成功但超时了就取消握手server.repl_state = REPL_STATE_CONNECT
     if (server.masterhost &&
         (server.repl_state == REPL_STATE_CONNECTING ||
          slaveIsInHandshakeState()) &&
@@ -2515,6 +2522,9 @@ void replicationCron(void) {
     }
 
     /* Check if we should connect to a MASTER */
+    //// 如果没有连接master，就执行连接connectWithMaster()
+    // server.repl_state = REPL_STATE_CONNECTING
+    // server.repl_transfer_s = fd
     if (server.repl_state == REPL_STATE_CONNECT) {
         serverLog(LL_NOTICE,"Connecting to MASTER %s:%d",
             server.masterhost, server.masterport);
@@ -2523,9 +2533,9 @@ void replicationCron(void) {
         }
     }
 
-    /* Send ACK to master from time to time.
-     * Note that we do not send periodic acks to masters that don't
-     * support PSYNC and replication offsets. */
+    //// 初始化连接是异步的，等到连接完成之后会设置server.master 包装的客户端
+
+    //// 主从复制的心跳包发送
     if (server.masterhost && server.master &&
         !(server.master->flags & CLIENT_PRE_PSYNC))
         replicationSendAck();
