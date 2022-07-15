@@ -1039,7 +1039,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     }
 
 
-    //// 哨兵模式下的定时器，默认跟随serverCron按照相同频率执行
+    //// 哨兵模式下的定时器，默认跟随serverCron按照相同频率执行，即100ms执行一次
     run_with_period(100) {
         if (server.sentinel_mode) sentinelTimer();
     }
