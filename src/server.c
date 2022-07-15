@@ -3648,8 +3648,8 @@ int main(int argc, char **argv) {
 
     //// 如果该实例是以哨兵模式运行，会将redis的普通命令移除，只添加一点哨兵模式的命令
     if (server.sentinel_mode) {
-        initSentinelConfig();
-        initSentinel();
+        initSentinelConfig();   // 设置哨兵模式的端口为26379
+        initSentinel();         // 映射哨兵的命令，初始化状态
     }
 
     /* Check if we need to start in redis-check-rdb/aof mode. We just execute
