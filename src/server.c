@@ -3580,6 +3580,7 @@ int redisIsSupervised(int mode) {
 }
 
 
+//// redis 启动的入口函数
 int main(int argc, char **argv) {
     struct timeval tv;
     int j;
@@ -3642,7 +3643,7 @@ int main(int argc, char **argv) {
     for (j = 0; j < argc; j++) server.exec_argv[j] = zstrdup(argv[j]);
 
 
-    //// 如果该实例是以哨兵模式运行
+    //// 如果该实例是以哨兵模式运行，会将redis的普通命令移除，只添加一点哨兵模式的命令
     if (server.sentinel_mode) {
         initSentinelConfig();
         initSentinel();
