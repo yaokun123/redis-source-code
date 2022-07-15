@@ -3421,6 +3421,7 @@ void memtest(size_t megabytes, int passes);
 
 /* Returns 1 if there is --sentinel among the arguments or if
  * argv[0] contains "redis-sentinel". */
+//// 判断是否以哨兵命令运行服务
 int checkForSentinelMode(int argc, char **argv) {
     int j;
 
@@ -3622,6 +3623,8 @@ int main(int argc, char **argv) {
     char hashseed[16];
     getRandomHexChars(hashseed,sizeof(hashseed));
     dictSetHashFunctionSeed((uint8_t*)hashseed);
+
+    //// 是否是哨兵模式
     server.sentinel_mode = checkForSentinelMode(argc,argv);
 
 
