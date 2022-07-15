@@ -1028,7 +1028,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
     /* Replication cron function -- used to reconnect to master,
      * detect transfer failures, start background RDB transfers and so forth. */
-    //// 主从复制的定时器，默认1s执行一次（在hz=10默认值情况下）
+    //// 主从复制的定时器，默认10s执行一次（在hz=10默认值情况下）
     run_with_period(1000) replicationCron();
 
 
