@@ -1117,6 +1117,7 @@ void sentinelDisconnectCallback(const redisAsyncContext *c, int status) {
  * a master with the same name, a slave with the same address, or a sentinel
  * with the same ID already exists. */
 
+//// 创建哨兵监控的实例对象
 sentinelRedisInstance *createSentinelRedisInstance(char *name, int flags, char *hostname, int port, int quorum, sentinelRedisInstance *master) {
     sentinelRedisInstance *ri;
     sentinelAddr *addr;
