@@ -1033,7 +1033,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
 
     /* Run the Redis Cluster cron. */
-    //// 集群定时器，默认1s执行一次
+    //// 集群定时器，默认跟随serverCron按照相同频率执行，即100ms执行一次
     run_with_period(100) {
         if (server.cluster_enabled) clusterCron();
     }
