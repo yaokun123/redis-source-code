@@ -169,6 +169,7 @@ void queueLoadModule(sds path, sds *argv, int argc) {
     listAddNodeTail(server.loadmodule_queue,loadmod);
 }
 
+//// 解析配置
 void loadServerConfigFromString(char *config) {
     char *err = NULL;
     int linenum = 0, totlines, i;
@@ -716,6 +717,9 @@ void loadServerConfigFromString(char *config) {
         } else if (!strcasecmp(argv[0],"loadmodule") && argc >= 2) {
             queueLoadModule(argv[1],&argv[2],argc-2);
         } else if (!strcasecmp(argv[0],"sentinel")) {
+
+
+            //// 哨兵模式的配置
             /* argc == 1 is handled by main() as we need to enter the sentinel
              * mode ASAP. */
             if (argc != 1) {
@@ -723,6 +727,8 @@ void loadServerConfigFromString(char *config) {
                     err = "sentinel directive while not in sentinel mode";
                     goto loaderr;
                 }
+
+                //// 解析哨兵模式的配置
                 err = sentinelHandleConfiguration(argv+1,argc-1);
                 if (err) goto loaderr;
             }
@@ -758,6 +764,7 @@ loaderr:
  * Both filename and options can be NULL, in such a case are considered
  * empty. This way loadServerConfig can be used to just load a file or
  * just load a string. */
+//// 解析配置
 void loadServerConfig(char *filename, char *options) {
     sds config = sdsempty();
     char buf[CONFIG_MAX_LINE+1];
@@ -784,6 +791,7 @@ void loadServerConfig(char *filename, char *options) {
         config = sdscat(config,"\n");
         config = sdscat(config,options);
     }
+    //// 解析配置
     loadServerConfigFromString(config);
     sdsfree(config);
 }

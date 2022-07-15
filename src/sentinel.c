@@ -1545,14 +1545,20 @@ char *sentinelGetInstanceTypeString(sentinelRedisInstance *ri) {
 }
 
 /* ============================ Config handling ============================= */
+//// 解析哨兵模式的配置
 char *sentinelHandleConfiguration(char **argv, int argc) {
     sentinelRedisInstance *ri;
 
+    // 哨兵模式的监控节点配置
+    // sentinel monitor mymaster 127.0.0.1 6379 2
+    //             ^
     if (!strcasecmp(argv[0],"monitor") && argc == 5) {
         /* monitor <name> <host> <port> <quorum> */
         int quorum = atoi(argv[4]);
 
         if (quorum <= 0) return "Quorum must be 1 or greater.";
+
+        //// 创建实例对象
         if (createSentinelRedisInstance(argv[1],SRI_MASTER,argv[2],
                                         atoi(argv[3]),quorum,NULL) == NULL)
         {

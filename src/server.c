@@ -3724,6 +3724,8 @@ int main(int argc, char **argv) {
             exit(1);
         }
         resetServerSaveParams();
+
+        //// 解析配置，哨兵模式的配置也在这里处理
         loadServerConfig(configfile,options);
         sdsfree(options);
     }
