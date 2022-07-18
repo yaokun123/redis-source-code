@@ -37,12 +37,13 @@
 struct clusterNode;
 
 /* clusterLink encapsulates everything needed to talk with a remote node. */
+//// 保存了连接节点所需的有关信息，比如套接字描述符，输入输出缓冲区
 typedef struct clusterLink {
-    mstime_t ctime;             /* Link creation time */
-    int fd;                     /* TCP socket file descriptor */
-    sds sndbuf;                 /* Packet send buffer */
-    sds rcvbuf;                 /* Packet reception buffer */
-    struct clusterNode *node;   /* Node related to this link if any, or NULL */
+    mstime_t ctime;             // 连接的创建时间
+    int fd;                     // TCP套接字描述符
+    sds sndbuf;                 // 输出缓冲区，保存着等待发送给其他节点的消息
+    sds rcvbuf;                 // 输入缓冲区，保存着从其他节点接受到的消息
+    struct clusterNode *node;   // 与这个连接相关联的节点，如果没有的话就为NULL
 } clusterLink;
 
 /* Cluster node flags and macros. */
