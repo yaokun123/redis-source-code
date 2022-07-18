@@ -1194,8 +1194,8 @@ struct redisServer {
     // 因为这两个时间是在serverCron中设置的，而serverCron默认1ms执行一次，所以这两个属性记录的时间的精度并不高
 
     /* Pubsub */
-    dict *pubsub_channels;  /* Map channels to list of subscribed clients */
-    list *pubsub_patterns;  /* A list of pubsub_patterns */
+    dict *pubsub_channels;  // 保存所有频道的订阅关系（key为频道，value为客户端链表）
+    list *pubsub_patterns;  // 保存所有模式的订阅关系
     int notify_keyspace_events; /* Events to propagate via Pub/Sub. This is an
                                    xor of NOTIFY_... flags. */
     /* Cluster */
