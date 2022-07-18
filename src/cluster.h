@@ -131,12 +131,14 @@ typedef struct clusterNode {
     list *fail_reports;         /* List of nodes signaling this as failing */
 } clusterNode;
 
+//// 记录了在当前节点的视角下，集群目前所处的状态。例如集群是在线还是下线，集群包含多少个节点，集群当前的配置纪元
 typedef struct clusterState {
-    clusterNode *myself;  /* This node */
-    uint64_t currentEpoch;
-    int state;            /* CLUSTER_OK, CLUSTER_FAIL, ... */
-    int size;             /* Num of master nodes with at least one slot */
-    dict *nodes;          /* Hash table of name -> clusterNode structures */
+    clusterNode *myself;                                    // 指向当前节点的指针
+    uint64_t currentEpoch;                                  // 集群当前的配置纪元，用于实现故障转移
+    int state;                                              // 集群当前的状态，是在线还是下线
+    int size;                                               // 集群中至少处理着一个槽的节点的数量
+    dict *nodes;                                            // 集群节点名单（包括myself节点）
+                                                            // 字典的键为节点的名字，字典的值为节点对应的clusterNode结构
     dict *nodes_black_list; /* Nodes we don't re-add for a few seconds. */
     clusterNode *migrating_slots_to[CLUSTER_SLOTS];
     clusterNode *importing_slots_from[CLUSTER_SLOTS];
