@@ -103,10 +103,11 @@ typedef struct clusterNodeFailReport {
 } clusterNodeFailReport;
 
 typedef struct clusterNode {
-    mstime_t ctime; /* Node object creation time. */
-    char name[CLUSTER_NAMELEN]; /* Node name, hex string, sha1-size */
-    int flags;      /* CLUSTER_NODE_... */
-    uint64_t configEpoch; /* Last configEpoch observed for this node */
+    mstime_t ctime;                     // 创建节点的时间
+    char name[CLUSTER_NAMELEN];         // 节点的名字，由40个十六进制字符组成
+    int flags;                          // 节点标识，使用各种不同的标识值记录节点的角色（比如主节点或者从节点）
+                                        // 以及节点目前所处的状态（比如在线或者下线）
+    uint64_t configEpoch;               // 节点当前的配置纪元，用于实现故障转移
     unsigned char slots[CLUSTER_SLOTS/8]; /* slots handled by this node */
     int numslots;   /* Number of slots handled by this node */
     int numslaves;  /* Number of slave nodes, if this is a master */
@@ -122,10 +123,10 @@ typedef struct clusterNode {
     mstime_t repl_offset_time;  /* Unix time we received offset for this node */
     mstime_t orphaned_time;     /* Starting time of orphaned master condition */
     long long repl_offset;      /* Last known repl offset for this node. */
-    char ip[NET_IP_STR_LEN];  /* Latest known IP address of this node */
-    int port;                   /* Latest known clients port of this node */
+    char ip[NET_IP_STR_LEN];    // 节点的IP地址
+    int port;                   // 节点的端口
     int cport;                  /* Latest known cluster port of this node. */
-    clusterLink *link;          /* TCP/IP link with this node */
+    clusterLink *link;          // 保存连接节点所需的有关信息
     list *fail_reports;         /* List of nodes signaling this as failing */
 } clusterNode;
 
