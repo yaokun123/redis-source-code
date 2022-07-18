@@ -100,8 +100,10 @@ typedef struct clusterLink {
 /* This structure represent elements of node->fail_reports. */
 //// 每个下线报告由改结构表示
 typedef struct clusterNodeFailReport {
-    struct clusterNode *node;  /* Node reporting the failure condition. */
-    mstime_t time;             /* Time of the last report from this node. */
+    struct clusterNode *node;           // 报告目标节点已下线的节点
+    mstime_t time;                      // 最后一次从node节点收到下线报告的时间
+                                        // 程序使用这个时间戳来检查下线报告是否过期
+                                        // 与当前时间相差太久的下线报告会被删除
 } clusterNodeFailReport;
 
 typedef struct clusterNode {
