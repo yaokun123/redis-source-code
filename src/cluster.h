@@ -109,8 +109,8 @@ typedef struct clusterNode {
     int flags;                          // 节点标识，使用各种不同的标识值记录节点的角色（比如主节点或者从节点）
                                         // 以及节点目前所处的状态（比如在线或者下线）
     uint64_t configEpoch;               // 节点当前的配置纪元，用于实现故障转移
-    unsigned char slots[CLUSTER_SLOTS/8]; /* slots handled by this node */
-    int numslots;   /* Number of slots handled by this node */
+    unsigned char slots[CLUSTER_SLOTS/8]; // 当前节点处理哪些槽，二进制位数组
+    int numslots;                         // 当前节点处理槽的个数
     int numslaves;  /* Number of slave nodes, if this is a master */
     struct clusterNode **slaves; /* pointers to slave nodes */
     struct clusterNode *slaveof; /* pointer to the master node. Note that it
@@ -142,7 +142,7 @@ typedef struct clusterState {
     dict *nodes_black_list; /* Nodes we don't re-add for a few seconds. */
     clusterNode *migrating_slots_to[CLUSTER_SLOTS];
     clusterNode *importing_slots_from[CLUSTER_SLOTS];
-    clusterNode *slots[CLUSTER_SLOTS];
+    clusterNode *slots[CLUSTER_SLOTS];                      // 记录了集群中所有（16384）个槽的指派信息
     uint64_t slots_keys_count[CLUSTER_SLOTS];
     rax *slots_to_keys;
     /* The following fields are used to take the slave state on elections. */
