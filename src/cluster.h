@@ -98,6 +98,7 @@ typedef struct clusterLink {
 #define CLUSTERMSG_TYPE_COUNT 9         /* Total number of message types. */
 
 /* This structure represent elements of node->fail_reports. */
+//// 每个下线报告由改结构表示
 typedef struct clusterNodeFailReport {
     struct clusterNode *node;  /* Node reporting the failure condition. */
     mstime_t time;             /* Time of the last report from this node. */
@@ -111,12 +112,9 @@ typedef struct clusterNode {
     uint64_t configEpoch;               // 节点当前的配置纪元，用于实现故障转移
     unsigned char slots[CLUSTER_SLOTS/8]; // 当前节点处理哪些槽，二进制位数组
     int numslots;                         // 当前节点处理槽的个数
-    int numslaves;  /* Number of slave nodes, if this is a master */
-    struct clusterNode **slaves; /* pointers to slave nodes */
-    struct clusterNode *slaveof; /* pointer to the master node. Note that it
-                                    may be NULL even if the node is a slave
-                                    if we don't have the master node in our
-                                    tables. */
+    int numslaves;                        // 正在复制的从节点个数
+    struct clusterNode **slaves;          // 当前节点的从服务器
+    struct clusterNode *slaveof;          // 如果当前节点是从节点，指向主节点
     mstime_t ping_sent;      /* Unix time we sent latest ping */
     mstime_t pong_received;  /* Unix time we received the pong */
     mstime_t fail_time;      /* Unix time when FAIL flag was set */
@@ -128,7 +126,7 @@ typedef struct clusterNode {
     int port;                   // 节点的端口
     int cport;                  /* Latest known cluster port of this node. */
     clusterLink *link;          // 保存连接节点所需的有关信息
-    list *fail_reports;         /* List of nodes signaling this as failing */
+    list *fail_reports;         // 一个链表，记录了所有其他节点对该节点的下线报告
 } clusterNode;
 
 //// 记录了在当前节点的视角下，集群目前所处的状态。例如集群是在线还是下线，集群包含多少个节点，集群当前的配置纪元
@@ -137,11 +135,11 @@ typedef struct clusterState {
     uint64_t currentEpoch;                                  // 集群当前的配置纪元，用于实现故障转移
     int state;                                              // 集群当前的状态，是在线还是下线
     int size;                                               // 集群中至少处理着一个槽的节点的数量
-    dict *nodes;                                            // 集群节点名单（包括myself节点）
+    dict *nodes;                                            //// 集群节点名单（包括myself节点）
                                                             // 字典的键为节点的名字，字典的值为节点对应的clusterNode结构
     dict *nodes_black_list; /* Nodes we don't re-add for a few seconds. */
-    clusterNode *migrating_slots_to[CLUSTER_SLOTS];
-    clusterNode *importing_slots_from[CLUSTER_SLOTS];
+    clusterNode *migrating_slots_to[CLUSTER_SLOTS];         // 记录了当前节点正在迁移至其他节点的槽（导出）
+    clusterNode *importing_slots_from[CLUSTER_SLOTS];       // 记录了当前节点正在从其他节点导入的槽（导入）
     clusterNode *slots[CLUSTER_SLOTS];                      // 记录了集群中所有（16384）个槽的指派信息
     uint64_t slots_keys_count[CLUSTER_SLOTS];
     rax *slots_to_keys;                                     // 记录槽和键的关系，用于重新分片时快速转移键
