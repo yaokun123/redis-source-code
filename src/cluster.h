@@ -144,7 +144,7 @@ typedef struct clusterState {
     clusterNode *importing_slots_from[CLUSTER_SLOTS];
     clusterNode *slots[CLUSTER_SLOTS];                      // 记录了集群中所有（16384）个槽的指派信息
     uint64_t slots_keys_count[CLUSTER_SLOTS];
-    rax *slots_to_keys;
+    rax *slots_to_keys;                                     // 记录槽和键的关系，用于重新分片时快速转移键
     /* The following fields are used to take the slave state on elections. */
     mstime_t failover_auth_time; /* Time of previous or next election. */
     int failover_auth_count;    /* Number of votes received so far. */
