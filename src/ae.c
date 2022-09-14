@@ -359,7 +359,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             tvp = &tv;
 
             //// 计算下一次时间事件要执行的时间差，文件事件管理器（比如epoll_wait）要等待的时间
-            //// 不用担心这个时间差会太大，因为serverCron会每1ms执行一次
+            //// 不用担心这个时间差会太大，因为serverCron会每100ms执行一次
             long long ms =
                 (shortest->when_sec - now_sec)*1000 +
                 shortest->when_ms - now_ms;
