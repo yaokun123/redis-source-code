@@ -155,11 +155,13 @@ robj *dbRandomKey(redisDb *db) {
     }
 }
 
-/* Delete a key, value, and associated expiration entry if any, from the DB */
+
+//// 同步删除key
 int dbSyncDelete(redisDb *db, robj *key) {
-    /* Deleting an entry from the expires dict will not free the sds of
-     * the key, because it is shared with the main dictionary. */
+    // 在过期字典中删除key
     if (dictSize(db->expires) > 0) dictDelete(db->expires,key->ptr);
+
+    // 在数据库中删除key
     if (dictDelete(db->dict,key->ptr) == DICT_OK) {
         if (server.cluster_enabled) slotToKeyDel(key);
         return 1;
@@ -296,7 +298,7 @@ void flushallCommand(client *c) {
     server.dirty++;
 }
 
-/* This command implements DEL and LAZYDEL. */
+//// 删除key，lazy决定是同步删除还是异步删除
 void delGenericCommand(client *c, int lazy) {
     int numdel = 0, j;
 
@@ -315,10 +317,12 @@ void delGenericCommand(client *c, int lazy) {
     addReplyLongLong(c,numdel);
 }
 
+//// 同步删除key，会造成redis卡死，删除小数据时使用
 void delCommand(client *c) {
     delGenericCommand(c,0);
 }
 
+//// 异步删除key。比较安全，删除大数据时候使用
 void unlinkCommand(client *c) {
     delGenericCommand(c,1);
 }

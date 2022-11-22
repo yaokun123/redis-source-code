@@ -287,7 +287,7 @@ static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
     dictEntry *he, *prevHe;
     int table;
 
-    if (d->ht[0].used == 0 && d->ht[1].used == 0) return NULL;              // 字典为空
+    if (d->ht[0].used == 0 && d->ht[1].used == 0) return NULL;              // 字典为空，直接返回
 
     if (dictIsRehashing(d)) _dictRehashStep(d);                             // 如果正在进行rehash，则出发一次rehash操作
     h = dictHashKey(d, key);                                                // 计算哈希值
@@ -296,7 +296,7 @@ static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
         idx = h & d->ht[table].sizemask;
         he = d->ht[table].table[idx];
         prevHe = NULL;
-        while(he) {
+        while(he) {                                                         // 循环是因为有哈希冲突
             if (key==he->key || dictCompareKeys(d, key, he->key)) {
                 //// 找到节点，要删除
                 if (prevHe)                                                 // 如果不是第一个节点
