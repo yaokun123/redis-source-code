@@ -13,65 +13,47 @@ size_t lazyfreeGetPendingObjectsCount(void) {
     return aux;
 }
 
-/* Return the amount of work needed in order to free an object.
- * The return value is not always the actual number of allocations the
- * object is compoesd of, but a number proportional to it.
- *
- * For strings the function always returns 1.
- *
- * For aggregated objects represented by hash tables or other data structures
- * the function just returns the number of elements the object is composed of.
- *
- * Objects composed of single allocations are always reported as having a
- * single item even if they are actaully logical composed of multiple
- * elements.
- *
- * For lists the funciton returns the number of elements in the quicklist
- * representing the list. */
 size_t lazyfreeGetFreeEffort(robj *obj) {
-    if (obj->type == OBJ_LIST) {
+    if (obj->type == OBJ_LIST) { // 如果是list，返回list的元素个数
         quicklist *ql = obj->ptr;
         return ql->len;
-    } else if (obj->type == OBJ_SET && obj->encoding == OBJ_ENCODING_HT) {
+    } else if (obj->type == OBJ_SET && obj->encoding == OBJ_ENCODING_HT) { // 如果是set，返回set的元素个数
         dict *ht = obj->ptr;
         return dictSize(ht);
-    } else if (obj->type == OBJ_ZSET && obj->encoding == OBJ_ENCODING_SKIPLIST){
+    } else if (obj->type == OBJ_ZSET && obj->encoding == OBJ_ENCODING_SKIPLIST){ // 如果是zset，返回zset的元素个数
         zset *zs = obj->ptr;
         return zs->zsl->length;
-    } else if (obj->type == OBJ_HASH && obj->encoding == OBJ_ENCODING_HT) {
+    } else if (obj->type == OBJ_HASH && obj->encoding == OBJ_ENCODING_HT) { // 如果是dict，返回dict的元素个数
         dict *ht = obj->ptr;
         return dictSize(ht);
-    } else {
-        return 1; /* Everything else is a single allocation. */
+    } else {                                                                // 其他情况返回1
+        return 1;
     }
 }
 
 //// 异步删除key
 #define LAZYFREE_THRESHOLD 64
 int dbAsyncDelete(redisDb *db, robj *key) {
-    /* Deleting an entry from the expires dict will not free the sds of
-     * the key, because it is shared with the main dictionary. */
+    // 在过期字典中删除key
     if (dictSize(db->expires) > 0) dictDelete(db->expires,key->ptr);
 
-    /* If the value is composed of a few allocations, to free in a lazy way
-     * is actually just slower... So under a certain limit we just free
-     * the object synchronously. */
+    // 在数据库中异步删除key
     dictEntry *de = dictUnlink(db->dict,key->ptr);
     if (de) {
-        robj *val = dictGetVal(de);
-        size_t free_effort = lazyfreeGetFreeEffort(val);
 
-        /* If releasing the object is too much work, let's put it into the
-         * lazy free list. */
+        robj *val = dictGetVal(de);                                         // 获取到key对应的val
+        size_t free_effort = lazyfreeGetFreeEffort(val);                    // 获取val的元素个数
+
+        // 如果要释放对象的元素太多，将会放入异步删除的队列中。此时虽然没有删除，但是会讲key的val设置为NULL
         if (free_effort > LAZYFREE_THRESHOLD) {
             atomicIncr(lazyfree_objects,1);
-            bioCreateBackgroundJob(BIO_LAZY_FREE,val,NULL,NULL);
-            dictSetVal(db->dict,de,NULL);
+            bioCreateBackgroundJob(BIO_LAZY_FREE,val,NULL,NULL); // 加入异步处理队列，type=2
+                                                                           // listAddNodeTail(bio_jobs[type],job);
+            dictSetVal(db->dict,de,NULL);                               // 将key对应的val设置为空
         }
     }
 
-    /* Release the key-val pair, or just the key if we set the val
-     * field to NULL in order to lazy free it later. */
+    // 如果要释放对象的元素不多，
     if (de) {
         dictFreeUnlinkedEntry(db->dict,de);
         if (server.cluster_enabled) slotToKeyDel(key);
