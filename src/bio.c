@@ -92,14 +92,14 @@ void lazyfreeFreeSlotsMapFromBioThread(zskiplist *sl);
  * main thread. */
 #define REDIS_THREAD_STACK_SIZE (1024*1024*4)
 
-/* Initialize the background system, spawning the thread. */
+//// 初始化异步队列
 void bioInit(void) {
     pthread_attr_t attr;
     pthread_t thread;
     size_t stacksize;
     int j;
 
-    /* Initialization of state vars and objects */
+    // BIO_NUM_OPS = 3，有三个异步队列。存放在bio_jobs数组中
     for (j = 0; j < BIO_NUM_OPS; j++) {
         pthread_mutex_init(&bio_mutex[j],NULL);
         pthread_cond_init(&bio_newjob_cond[j],NULL);
@@ -115,9 +115,8 @@ void bioInit(void) {
     while (stacksize < REDIS_THREAD_STACK_SIZE) stacksize *= 2;
     pthread_attr_setstacksize(&attr, stacksize);
 
-    /* Ready to spawn our threads. We use the single argument the thread
-     * function accepts in order to pass the job ID the thread is
-     * responsible of. */
+
+    //// 开三个线程处理
     for (j = 0; j < BIO_NUM_OPS; j++) {
         void *arg = (void*)(unsigned long) j;
         if (pthread_create(&thread,&attr,bioProcessBackgroundJobs,arg) != 0) {
@@ -128,6 +127,8 @@ void bioInit(void) {
     }
 }
 
+
+//// 加入异步队列
 void bioCreateBackgroundJob(int type, void *arg1, void *arg2, void *arg3) {
     struct bio_job *job = zmalloc(sizeof(*job));
 
@@ -142,6 +143,8 @@ void bioCreateBackgroundJob(int type, void *arg1, void *arg2, void *arg3) {
     pthread_mutex_unlock(&bio_mutex[type]);
 }
 
+
+//// 处理异步队列
 void *bioProcessBackgroundJobs(void *arg) {
     struct bio_job *job;
     unsigned long type = (unsigned long) arg;
@@ -168,6 +171,7 @@ void *bioProcessBackgroundJobs(void *arg) {
         serverLog(LL_WARNING,
             "Warning: can't mask SIGALRM in bio.c thread: %s", strerror(errno));
 
+    //// 处理异步队列的线程用不停止
     while(1) {
         listNode *ln;
 
