@@ -1870,7 +1870,7 @@ void initServer(void) {
     scriptingInit(1);           // 脚本初始化
     slowlogInit();                   // 慢查询日志初始化
     latencyMonitorInit();
-    bioInit();
+    bioInit();                       // 初始化异步线程
 
     // 初始化所使用的内存大小
     server.initial_memory_usage = zmalloc_used_memory();
