@@ -54,6 +54,7 @@ int dbAsyncDelete(redisDb *db, robj *key) {
     }
 
     // 释放key,val,entry
+    // 如果不满足元素个数大于64就直接释放
     if (de) {
         dictFreeUnlinkedEntry(db->dict,de);
         if (server.cluster_enabled) slotToKeyDel(key);
