@@ -53,7 +53,7 @@ int dbAsyncDelete(redisDb *db, robj *key) {
         }
     }
 
-    // 如果要释放对象的元素不多，就直接删除了
+    // 释放key,val,entry
     if (de) {
         dictFreeUnlinkedEntry(db->dict,de);
         if (server.cluster_enabled) slotToKeyDel(key);
