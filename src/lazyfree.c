@@ -44,7 +44,7 @@ int dbAsyncDelete(redisDb *db, robj *key) {
         robj *val = dictGetVal(de);                                         // 获取到key对应的val
         size_t free_effort = lazyfreeGetFreeEffort(val);                    // 获取val的元素个数
 
-        // 如果要释放对象的元素太多，将会放入异步删除的队列中。此时虽然没有删除，但是会讲key的val设置为NULL
+        // 如果要释放对象的元素太多，将会放入异步删除的队列中。此时虽然没有删除，但是会将key的val设置为NULL
         if (free_effort > LAZYFREE_THRESHOLD) {
             atomicIncr(lazyfree_objects,1);
             bioCreateBackgroundJob(BIO_LAZY_FREE,val,NULL,NULL); // 加入异步处理队列，type=2
